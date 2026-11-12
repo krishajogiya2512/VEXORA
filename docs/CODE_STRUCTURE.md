@@ -11,3 +11,8 @@
 │   │   └── services/      # Business & detection logic
 └── frontend/              # Electron & React user interface
 ```
+
+## Module Conventions
+- Use async/await for asynchronous database operations.
+- Centralize error responses through custom middleware.
+- Encapsulate detection heuristics within dedicated service modules.
