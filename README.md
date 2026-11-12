@@ -318,3 +318,6 @@ This project is developed for academic and research purposes.
   <br/>
   Detect. Analyze. Protect. 🛡️
 </p>
+## 📚 Extended Documentation
+
+Refer to the [docs/](./docs/) directory for detailed API specifications, architecture diagrams, and development guides.
