@@ -1,35 +1,30 @@
 'use strict';
 
 /**
- * notFound – Catch-all for routes that don't match any handler.
- *
- * Mount this AFTER all route definitions but BEFORE `errorHandler`.
+ * Global error-handling middleware for VEXORA backend.
  */
-const notFound = (req, res, _next) => {
-  return res.status(404).json({
+
+/**
+ * notFound – 404 handler for unmatched routes.
+ */
+const notFound = (req, res, next) => {
+  res.status(404).json({
     success: false,
     message: `Route not found: ${req.method} ${req.originalUrl}`,
   });
 };
 
 /**
- * errorHandler – Global Express error handler.
- *
- * Normalises a wide range of error types into the consistent
- * `{ success, message, errors }` response shape.
- *
- * In development mode the full stack trace is included for debugging.
+ * errorHandler – centralised error handler.
+ * Must be registered AFTER all routes.
  */
-// eslint-disable-next-line no-unused-vars -- Express requires the 4-param signature.
-const errorHandler = (err, req, res, _next) => {
+const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused-vars
   let statusCode = err.statusCode || err.status || 500;
-  let message = err.message || 'Internal Server Error';
-  let errors = [];
+  let message = err.message || 'Internal server error';
+  let errors = null;
 
-  // -----------------------------------------------------------
-  // Mongoose ValidationError
-  // -----------------------------------------------------------
-  if (err.name === 'ValidationError' && err.errors) {
+  // ── Mongoose Validation Error ─────────────────────────────────────────────
+  if (err.name === 'ValidationError') {
     statusCode = 400;
     message = 'Validation failed';
     errors = Object.values(err.errors).map((e) => ({
@@ -38,93 +33,50 @@ const errorHandler = (err, req, res, _next) => {
     }));
   }
 
-  // -----------------------------------------------------------
-  // Mongoose CastError (e.g. invalid ObjectId)
-  // -----------------------------------------------------------
+  // ── Mongoose CastError (invalid ObjectId) ─────────────────────────────────
   if (err.name === 'CastError') {
     statusCode = 400;
-    message = `Invalid ID format: ${err.value}`;
-    errors = [{ field: err.path, message: `Invalid value for ${err.path}` }];
+    message = `Invalid value for field '${err.path}': ${err.value}`;
   }
 
-  // -----------------------------------------------------------
-  // MongoDB duplicate-key error (code 11000)
-  // -----------------------------------------------------------
+  // ── MongoDB Duplicate Key ─────────────────────────────────────────────────
   if (err.code === 11000) {
     statusCode = 409;
-    const duplicateField = Object.keys(err.keyPattern || {})[0] || 'unknown';
-    const duplicateValue = err.keyValue
-      ? err.keyValue[duplicateField]
-      : 'unknown';
-    message = `Duplicate value for field: ${duplicateField}`;
-    errors = [
-      {
-        field: duplicateField,
-        message: `The value '${duplicateValue}' already exists for '${duplicateField}'.`,
-      },
-    ];
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    const value = err.keyValue ? err.keyValue[field] : '';
+    message = `Duplicate value: '${value}' already exists for ${field}`;
   }
 
-  // -----------------------------------------------------------
-  // JWT errors
-  // -----------------------------------------------------------
+  // ── JWT Errors ────────────────────────────────────────────────────────────
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
-    message = 'Invalid token. Please authenticate again.';
-    errors = [{ message: 'Token verification failed' }];
+    message = 'Invalid authentication token';
   }
-
   if (err.name === 'TokenExpiredError') {
     statusCode = 401;
-    message = 'Token has expired. Please log in again.';
-    errors = [{ message: 'Token expired', expiredAt: err.expiredAt }];
+    message = 'Authentication token has expired. Please log in again.';
   }
 
-  // -----------------------------------------------------------
-  // Multer errors
-  // -----------------------------------------------------------
+  // ── Multer Errors ─────────────────────────────────────────────────────────
   if (err.code === 'LIMIT_FILE_SIZE') {
-    statusCode = 400;
-    message = 'File is too large. Please upload a smaller file.';
-    errors = [
-      {
-        field: err.field || 'file',
-        message: `File exceeds the maximum allowed size.`,
-      },
-    ];
+    statusCode = 413;
+    message = `File too large. Maximum allowed size is ${Math.round((parseInt(process.env.UPLOAD_MAX_SIZE) || 5242880) / 1024 / 1024)} MB`;
   }
-
   if (err.code === 'LIMIT_UNEXPECTED_FILE') {
     statusCode = 400;
-    message = 'Unexpected file field.';
-    errors = [
-      {
-        field: err.field || 'file',
-        message: `Unexpected file upload field: '${err.field}'.`,
-      },
-    ];
+    message = 'Unexpected file field in upload';
   }
 
-  // -----------------------------------------------------------
-  // Build response
-  // -----------------------------------------------------------
-  const response = {
-    success: false,
-    message,
-    errors: errors.length > 0 ? errors : [{ message }],
-  };
+  // ── Build response ────────────────────────────────────────────────────────
+  const body = { success: false, message };
+  if (errors) body.errors = errors;
 
-  // Include stack trace in development for easier debugging.
+  // Include stack trace in development only
   if (process.env.NODE_ENV === 'development') {
-    response.stack = err.stack;
+    body.stack = err.stack;
   }
 
-  // Log server errors for observability (never log to the response in prod).
-  if (statusCode >= 500) {
-    console.error(`[ERROR] ${err.message}`, err.stack);
-  }
-
-  return res.status(statusCode).json(response);
+  res.status(statusCode).json(body);
 };
 
 module.exports = { notFound, errorHandler };

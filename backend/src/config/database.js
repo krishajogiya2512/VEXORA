@@ -1,33 +1,27 @@
+'use strict';
+
 const mongoose = require('mongoose');
 
-/**
- * Connect to MongoDB using Mongoose.
- * Reads the connection URI from the MONGODB_URI environment variable.
- * Logs success or failure and exits the process on critical connection errors.
- */
 const connectDB = async () => {
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/vexora';
+
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-
-    console.log(`MongoDB connected: ${conn.connection.host}:${conn.connection.port}/${conn.connection.name}`);
-
-    mongoose.connection.on('error', (err) => {
-      console.error(`MongoDB connection error: ${err.message}`);
+    const conn = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
     });
-
-    mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected. Attempting to reconnect...');
-    });
-
-    mongoose.connection.on('reconnected', () => {
-      console.log('MongoDB reconnected successfully.');
-    });
-
-    return conn;
+    console.log(`✅ MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
   } catch (error) {
-    console.error(`MongoDB connection failed: ${error.message}`);
+    console.error(`❌ MongoDB connection failed: ${error.message}`);
     process.exit(1);
   }
+
+  mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️  MongoDB disconnected');
+  });
+
+  mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB error:', err.message);
+  });
 };
 
 module.exports = connectDB;
