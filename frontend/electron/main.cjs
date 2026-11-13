@@ -18,7 +18,7 @@ function createWindow() {
     backgroundColor: '#0B1120',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // sandbox:true breaks preload on some Electron versions
