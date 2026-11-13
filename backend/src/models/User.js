@@ -53,19 +53,16 @@ const userSchema = new mongoose.Schema(
 );
 
 // ── Indexes ──────────────────────────────────────────────────────────────────
-userSchema.index({ email: 1 }, { unique: true });
+// Note: email uniqueness is enforced at the field level (unique: true above).
+// Declaring a separate schema index would create a duplicate – omitted.
 
 // ── Pre-save: hash password ──────────────────────────────────────────────────
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+// Use the no-callback async form (Mongoose 9 + bcryptjs 3 compatible).
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
 
-  try {
-    const salt = await bcrypt.genSalt(SALT_ROUNDS);
-    this.password = await bcrypt.hash(this.password, salt);
-    return next();
-  } catch (err) {
-    return next(err);
-  }
+  const salt = await bcrypt.genSalt(SALT_ROUNDS);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // ── Instance method: compare password ────────────────────────────────────────

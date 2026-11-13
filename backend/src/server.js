@@ -9,13 +9,23 @@ const path = require('path');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
+const autoSeedDev = require('./utils/autoSeedDev');
 
 const app = express();
 
 // ── Security middleware ───────────────────────────────────────────────────────
 app.use(helmet());
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .concat(['http://localhost:3000', 'http://localhost:5173']);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: (origin, cb) => {
+    // Allow requests with no origin (e.g. Electron file://, curl, Postman)
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin '${origin}' not allowed`));
+  },
   credentials: true,
 }));
 
@@ -85,6 +95,7 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await connectDB();
+  await autoSeedDev(); // no-op in production
   app.listen(PORT, () => {
     console.log(`\n🚀 VEXORA server running on port ${PORT}`);
     console.log(`📌 Environment: ${process.env.NODE_ENV || 'development'}`);

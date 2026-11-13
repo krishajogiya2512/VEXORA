@@ -117,7 +117,9 @@ const reportSchema = new mongoose.Schema(
 );
 
 // ── Indexes ──────────────────────────────────────────────────────────────────
-reportSchema.index({ caseId: 1 }, { unique: true });
+// Note: caseId uniqueness is enforced at the field level (unique: true above).
+// A separate schema index would create a duplicate – the status/author/date
+// indexes below are added only for query performance, not uniqueness.
 reportSchema.index({ status: 1 });
 reportSchema.index({ submittedBy: 1 });
 reportSchema.index({ severity: 1 });

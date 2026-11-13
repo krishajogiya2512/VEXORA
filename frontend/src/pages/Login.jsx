@@ -80,7 +80,7 @@ export default function Login() {
               <input
                 type="email"
                 className={`input ${fieldErrors.email ? 'border-red-500/50 focus:ring-red-500/30' : ''}`}
-                placeholder="officer@itbp.gov.in"
+                placeholder="admin@vexora-dev.test"
                 value={form.email}
                 onChange={handleChange('email')}
                 autoComplete="email"
