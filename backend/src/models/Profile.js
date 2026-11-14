@@ -97,11 +97,10 @@ const profileSchema = new mongoose.Schema(
 );
 
 // ── Pre-save: generate normalizedUsername ─────────────────────────────────────
-profileSchema.pre('save', function (next) {
+profileSchema.pre('save', async function () {
   if (this.isModified('username') || !this.normalizedUsername) {
     this.normalizedUsername = this.username.toLowerCase().trim();
   }
-  return next();
 });
 
 // ── Indexes ──────────────────────────────────────────────────────────────────

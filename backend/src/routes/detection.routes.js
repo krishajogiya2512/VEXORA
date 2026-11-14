@@ -9,9 +9,9 @@ const { authorize } = require('../middleware/role.middleware');
 router.use(protect);
 
 // POST /api/detection/analyze
-router.post('/analyze', authorize('ADMIN', 'ANALYST'), analyzeProfile);
+router.post('/analyze', authorize('ADMIN', 'ANALYST', 'VIEWER'), analyzeProfile);
 // POST /api/detection/batch
-router.post('/batch', authorize('ADMIN', 'ANALYST'), batchAnalyze);
+router.post('/batch', authorize('ADMIN', 'ANALYST', 'VIEWER'), batchAnalyze);
 // GET  /api/detection/statistics
 router.get('/statistics', getStatistics);
 // GET  /api/detection/history
