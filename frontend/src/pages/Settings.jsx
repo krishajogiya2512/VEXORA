@@ -179,13 +179,13 @@ function ConnectionStatus() {
         <div className="bg-vx-secondary/60 border border-vx-border rounded-xl px-4 py-3 text-xs space-y-1">
           <div className="flex justify-between"><span className="text-vx-muted">Status</span><span className="text-green-400 font-medium">{info.status}</span></div>
           <div className="flex justify-between"><span className="text-vx-muted">Environment</span><span className="text-vx-text">{info.environment || '—'}</span></div>
-          <div className="flex justify-between"><span className="text-vx-muted">API Base</span><span className="text-vx-text font-mono">{import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}</span></div>
+          <div className="flex justify-between"><span className="text-vx-muted">API Base</span><span className="text-vx-text font-mono">{import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}</span></div>
           {info.timestamp && <div className="flex justify-between"><span className="text-vx-muted">Server Time</span><span className="text-vx-text">{new Date(info.timestamp).toLocaleString()}</span></div>}
         </div>
       )}
 
       {status === 'offline' && (
-        <Alert type="error" message="Cannot connect to the VEXORA backend. Make sure the server is running on port 5000." />
+        <Alert type="error" message="Cannot connect to the VEXORA backend. Make sure the server is running on port 5001." />
       )}
     </div>
   );

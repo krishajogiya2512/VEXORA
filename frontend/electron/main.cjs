@@ -4,7 +4,7 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const { URL } = require('url');
 
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = process.env.NODE_ENV === 'development' || !(app && app.isPackaged);
 
 let mainWindow;
 
