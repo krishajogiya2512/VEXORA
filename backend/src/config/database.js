@@ -20,10 +20,35 @@ const connectDB = async () => {
   const isDev = (process.env.NODE_ENV || 'development') === 'development';
   const forceMemory = process.env.USE_MEMORY_DB === 'true';
 
+<<<<<<< Updated upstream
   // ── Helper: attempt a real connection ─────────────────────────────────────
   const tryConnect = async (connectionUri) => {
     await mongoose.connect(connectionUri, {
       serverSelectionTimeoutMS: 4000,
+=======
+  // ── Guard: require MONGODB_URI ─────────────────────────────────────────────
+  if (!uri || uri === 'your_mongodb_atlas_connection_string_here') {
+    console.error('❌  MONGODB_URI is not configured.');
+    console.error('    1. Copy backend/.env.example → backend/.env');
+    console.error('    2. Set MONGODB_URI to your MongoDB Atlas connection string.');
+    console.error('    3. Restart the server.');
+    process.exit(1);
+  }
+
+  // ── Optional: in-memory server for automated tests only ───────────────────
+  if (process.env.USE_MEMORY_DB === 'true' && env === 'test') {
+    return _startMemoryServer();
+  }
+
+  // ── Connect to real MongoDB ────────────────────────────────────────────────
+  console.log('⏳  Connecting to MongoDB…');
+
+  try {
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 30000, // 30 s — allows time for SRV DNS lookup + TLS handshake
+      socketTimeoutMS: 45000,
+      family: 4,                       // prefer IPv4; avoids IPv6 probe on networks without it
+>>>>>>> Stashed changes
     });
     console.log(
       `✅ MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`
