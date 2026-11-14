@@ -5,9 +5,9 @@
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n VITE,ELECTRON -c cyan,magenta \"vite\" \"wait-on http://localhost:5173 && NODE_ENV=development electron .\"",
+    "dev": "concurrently -n VITE,ELECTRON -c cyan,magenta \"vite\" \"wait-on http://localhost:5173 && env -u ELECTRON_RUN_AS_NODE NODE_ENV=development electron .\"",
     "vite": "vite",
-    "electron": "NODE_ENV=development electron .",
+    "electron": "env -u ELECTRON_RUN_AS_NODE NODE_ENV=development electron .",
     "build": "vite build",
     "build:electron": "vite build && electron-builder",
     "dist": "vite build && electron-builder --mac --win --linux",

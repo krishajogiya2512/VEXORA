@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Build outputs
+dist/
+dist-electron/
+build/
+coverage/
+
+# Uploads and temporary files
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.log
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
