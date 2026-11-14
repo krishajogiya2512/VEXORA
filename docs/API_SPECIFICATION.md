@@ -8,3 +8,16 @@
 ### Profile Analysis Endpoints
 - `POST /api/detection/analyze` - Submit a profile for real-time risk assessment.
 - `GET /api/detection/history` - Retrieve previously evaluated profile reports.
+
+### Response Format Example
+```json
+{
+  "success": true,
+  "data": {
+    "profileId": "654c123...",
+    "riskScore": 72,
+    "riskLevel": "High Risk",
+    "indicators": ["unusual_ratio", "default_avatar"]
+  }
+}
+```
