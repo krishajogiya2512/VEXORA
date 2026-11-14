@@ -3,29 +3,21 @@
 const mongoose = require('mongoose');
 
 /**
- * connectDB – Establishes a Mongoose connection.
+ * connectDB – Connects Mongoose to MongoDB Atlas using MONGODB_URI.
  *
- * Strategy (development only):
- *   1. Attempt to connect to the URI in MONGODB_URI env var (defaults to
- *      mongodb://localhost:27017/vexora).
- *   2. If the connection fails AND NODE_ENV is "development", fall back to
- *      an in-process mongodb-memory-server so the app works without a local
- *      MongoDB installation.
+ * Requirements:
+ *   - MONGODB_URI must be set in backend/.env.
+ *   - Works with MongoDB Atlas (mongodb+srv://) only in development/production.
+ *   - The server will NOT start if the connection fails.
+ *   - There is NO silent fallback to an in-memory database.
  *
- * In production the fallback is intentionally disabled – a real MongoDB URI
- * must be reachable or the process exits with a non-zero code.
+ * To use mongodb-memory-server explicitly for automated tests only, set:
+ *   USE_MEMORY_DB=true  (only honoured when NODE_ENV=test)
  */
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/vexora';
-  const isDev = (process.env.NODE_ENV || 'development') === 'development';
-  const forceMemory = process.env.USE_MEMORY_DB === 'true';
+  const uri = process.env.MONGODB_URI;
+  const env = process.env.NODE_ENV || 'development';
 
-<<<<<<< Updated upstream
-  // ── Helper: attempt a real connection ─────────────────────────────────────
-  const tryConnect = async (connectionUri) => {
-    await mongoose.connect(connectionUri, {
-      serverSelectionTimeoutMS: 4000,
-=======
   // ── Guard: require MONGODB_URI ─────────────────────────────────────────────
   if (!uri || uri === 'your_mongodb_atlas_connection_string_here') {
     console.error('❌  MONGODB_URI is not configured.');
@@ -46,79 +38,53 @@ const connectDB = async () => {
   try {
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 30000, // 30 s — allows time for SRV DNS lookup + TLS handshake
-      socketTimeoutMS: 45000,
-      family: 4,                       // prefer IPv4; avoids IPv6 probe on networks without it
->>>>>>> Stashed changes
+      socketTimeoutMS:          45000,
+      family:                   4,     // prefer IPv4; avoids IPv6 probe on networks without it
     });
-    console.log(
-      `✅ MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`
-    );
-  };
 
-  // ── Helper: start in-process memory server ────────────────────────────────
-  const startMemoryServer = async () => {
-    let MongoMemoryServer;
-    try {
-      ({ MongoMemoryServer } = require('mongodb-memory-server'));
-    } catch {
-      throw new Error(
-        'mongodb-memory-server is not installed. ' +
-          'Run: npm install --save-dev mongodb-memory-server'
-      );
-    }
-
-    const mongod = await MongoMemoryServer.create({
-      instance: { dbName: 'vexora' },
-    });
-    const memUri = mongod.getUri();
-
-    await mongoose.connect(memUri, { serverSelectionTimeoutMS: 10000 });
-
-    console.log('✅ MongoDB (in-process memory server) connected – development mode');
-    console.warn(
-      '⚠️  Data is stored in memory and will be lost when the server stops.\n' +
-        '   Install MongoDB locally for persistent storage.'
-    );
-
-    // Keep the mongod instance alive for the process lifetime
-    process.on('exit', () => mongod.stop());
-    process.on('SIGINT', async () => { await mongod.stop(); process.exit(); });
-    process.on('SIGTERM', async () => { await mongod.stop(); process.exit(); });
-  };
-
-  // ── Main connection logic ──────────────────────────────────────────────────
-  try {
-    if (forceMemory) {
-      await startMemoryServer();
-    } else {
-      await tryConnect(uri);
-    }
-  } catch (primaryError) {
-    if (isDev) {
-      console.warn(
-        `⚠️  Could not reach MongoDB at ${uri}: ${primaryError.message}`
-      );
-      console.log('🔄 Falling back to in-process mongodb-memory-server …');
-      try {
-        await startMemoryServer();
-      } catch (memErr) {
-        console.error(`❌ Memory server failed: ${memErr.message}`);
-        process.exit(1);
-      }
-    } else {
-      console.error(`❌ MongoDB connection failed: ${primaryError.message}`);
-      process.exit(1);
-    }
+    const { host, name } = mongoose.connection;
+    console.log(`✅  MongoDB connected → ${host}/${name}`);
+  } catch (err) {
+    console.error(`❌  MongoDB connection failed: ${err.message}`);
+    console.error('    Check that MONGODB_URI is correct and your IP is whitelisted in Atlas.');
+    process.exit(1);
   }
 
-  // ── Ongoing connection event listeners ────────────────────────────────────
+  // ── Ongoing event listeners ────────────────────────────────────────────────
   mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  MongoDB disconnected');
+    console.warn('⚠️   MongoDB disconnected – attempting reconnect…');
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    console.log('✅  MongoDB reconnected');
   });
 
   mongoose.connection.on('error', (err) => {
-    console.error('❌ MongoDB error:', err.message);
+    console.error('❌  MongoDB error:', err.message);
   });
+};
+
+// ── Internal helper: in-process memory server (tests only) ────────────────────
+const _startMemoryServer = async () => {
+  let MongoMemoryServer;
+  try {
+    ({ MongoMemoryServer } = require('mongodb-memory-server'));
+  } catch {
+    throw new Error(
+      'mongodb-memory-server is not installed. ' +
+        'Run: npm install --save-dev mongodb-memory-server'
+    );
+  }
+
+  const mongod = await MongoMemoryServer.create({ instance: { dbName: 'vexora_test' } });
+  const memUri = mongod.getUri();
+
+  await mongoose.connect(memUri, { serverSelectionTimeoutMS: 10000 });
+  console.log('✅  MongoDB (in-memory, test mode) connected');
+
+  process.on('exit', () => mongod.stop());
+  process.on('SIGINT', async () => { await mongod.stop(); process.exit(); });
+  process.on('SIGTERM', async () => { await mongod.stop(); process.exit(); });
 };
 
 module.exports = connectDB;
