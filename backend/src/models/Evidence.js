@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+/**
+ * Evidence Schema
+ *
+ * Stores forensic artifacts (screenshots, PDF reports, supporting documents)
+ * associated with social media investigation cases.
+ *
+ * Relationships:
+ * - profile: Optional reference to the target social media Profile
+ * - detection: Optional reference to the automated Detection analysis result
+ * - report: Optional reference to the parent investigation Report/Case
+ * - uploadedBy: Required reference to the User (investigator) who uploaded the artifact
+ */
 const evidenceSchema = new mongoose.Schema(
   {
     profile: {

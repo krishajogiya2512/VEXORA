@@ -1,5 +1,19 @@
 const mongoose = require('mongoose');
 
+/**
+ * Report Schema
+ *
+ * Primary investigation record representing a formal case in VEXORA.
+ *
+ * Core Relationships:
+ * - detection: Automated algorithmic and heuristic risk scoring result
+ * - profile: Analyzed social media account under investigation
+ * - submittedBy: Originating investigator/analyst User
+ * - assignedTo: Assigned lead investigator User
+ * - evidence: Associated forensic artifacts from the Evidence Vault
+ * - statusHistory: Immutable audit trail of status transitions with author references
+ * - analystNotes: Timestamped investigation notes logged during the case lifecycle
+ */
 const analystNoteSchema = new mongoose.Schema(
   {
     note: {
