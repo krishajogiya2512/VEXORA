@@ -26,3 +26,5 @@ export const profileService = {
     return data;
   },
 };
+
+export default profileService;

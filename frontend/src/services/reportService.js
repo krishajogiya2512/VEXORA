@@ -36,3 +36,5 @@ export const reportService = {
     return data;
   },
 };
+
+export default reportService;

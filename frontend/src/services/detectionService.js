@@ -31,3 +31,5 @@ export const detectionService = {
     return data;
   },
 };
+
+export default detectionService;

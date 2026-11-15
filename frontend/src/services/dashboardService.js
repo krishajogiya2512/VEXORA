@@ -11,3 +11,5 @@ export const dashboardService = {
     return data;
   },
 };
+
+export default dashboardService;
