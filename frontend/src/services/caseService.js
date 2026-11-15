@@ -1,4 +1,4 @@
-import api from './api';
+import api, { getErrorMessage } from './api';
 import { reportService } from './reportService';
 
 /**
@@ -18,8 +18,16 @@ export const caseService = {
     try {
       const { data } = await api.get('/cases', { params });
       return data;
-    } catch (_) {
-      return reportService.getReports(params);
+    } catch (err) {
+      try {
+        return await reportService.getReports(params);
+      } catch (fallbackErr) {
+        return {
+          success: false,
+          data: [],
+          message: getErrorMessage(fallbackErr, 'Failed to fetch cases'),
+        };
+      }
     }
   },
 
