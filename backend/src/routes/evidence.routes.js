@@ -47,9 +47,9 @@ router.post('/', authorize('ADMIN', 'ANALYST'), upload.single('file'), async (re
       filePath: req.file.path,
       description,
       evidenceType: evidenceType || 'other',
-      profile: profileId || undefined,
-      detection: detectionId || undefined,
-      report: reportId || undefined,
+      profile: (profileId && profileId !== 'undefined' && profileId !== 'null') ? profileId : undefined,
+      detection: (detectionId && detectionId !== 'undefined' && detectionId !== 'null') ? detectionId : undefined,
+      report: (reportId && reportId !== 'undefined' && reportId !== 'null') ? reportId : undefined,
     });
 
     return successResponse(res, 'Evidence uploaded successfully', { evidence }, 201);
@@ -68,17 +68,37 @@ router.get('/', async (req, res, next) => {
     if (req.query.reportId) query.report = req.query.reportId;
 
     const [evidence, total] = await Promise.all([
-      Evidence.find(query).populate('uploadedBy', 'name email').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Evidence.find(query).populate('uploadedBy', 'name email').populate('profile', 'username platform').sort({ createdAt: -1 }).skip(skip).limit(limit),
       Evidence.countDocuments(query),
     ]);
     return paginatedResponse(res, 'Evidence retrieved', evidence, { page, limit, total, pages: Math.ceil(total / limit) });
   } catch (error) { next(error); }
 });
 
+// GET /api/evidence/statistics
+router.get('/statistics', async (req, res, next) => {
+  try {
+    const [total, byType, images, documents] = await Promise.all([
+      Evidence.countDocuments({}),
+      Evidence.aggregate([{ $group: { _id: '$evidenceType', count: { $sum: 1 } } }]),
+      Evidence.countDocuments({ mimeType: { $regex: '^image/' } }),
+      Evidence.countDocuments({ mimeType: 'application/pdf' }),
+    ]);
+    const typeMap = {};
+    byType.forEach(t => { typeMap[t._id] = t.count; });
+    return successResponse(res, 'Evidence statistics', {
+      total,
+      images,
+      documents,
+      byType: typeMap,
+    });
+  } catch (error) { next(error); }
+});
+
 // GET /api/evidence/:id
 router.get('/:id', async (req, res, next) => {
   try {
-    const evidence = await Evidence.findById(req.params.id).populate('uploadedBy', 'name email');
+    const evidence = await Evidence.findById(req.params.id).populate('uploadedBy', 'name email').populate('profile', 'username platform');
     if (!evidence) return errorResponse(res, 'Evidence not found', 404);
     return successResponse(res, 'Evidence retrieved', { evidence });
   } catch (error) { next(error); }
