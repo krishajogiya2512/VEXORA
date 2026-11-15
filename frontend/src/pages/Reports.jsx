@@ -418,7 +418,9 @@ export default function Reports() {
   const filtered = filters.search
     ? data.filter(r =>
         r.caseId?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        r.title?.toLowerCase().includes(filters.search.toLowerCase())
+        r.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        r.profile?.username?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        r.submittedBy?.name?.toLowerCase().includes(filters.search.toLowerCase())
       )
     : data;
 
@@ -437,8 +439,18 @@ export default function Reports() {
     },
     {
       key: 'title',
-      label: 'Title',
-      render: (v) => <p className="text-vx-text text-sm truncate max-w-xs font-medium">{v}</p>,
+      label: 'Incident & Target',
+      render: (v, row) => (
+        <div>
+          <p className="text-vx-text text-sm truncate max-w-xs font-medium">{v}</p>
+          {row.profile?.username && (
+            <p className="text-vx-muted text-xs font-mono mt-0.5">
+              @{row.profile.username}
+              <span className="text-[10px] capitalize text-vx-sub font-sans ml-1">({row.profile.platform || 'platform'})</span>
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'severity',
@@ -510,11 +522,20 @@ export default function Reports() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-vx-muted" />
           <input
             type="text"
-            placeholder="Search case ID or title…"
-            className="input pl-9 text-xs py-2"
+            placeholder="Search case ID, title, target username…"
+            className="input pl-9 pr-8 text-xs py-2"
             value={filters.search}
-            onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+            onChange={e => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }}
           />
+          {filters.search && (
+            <button
+              onClick={() => setFilters(f => ({ ...f, search: '' }))}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-vx-muted hover:text-vx-text transition-colors"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Status filter */}
