@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Upload, Trash2, FileText, Image, X, Loader2, AlertCircle, Check,
-  Search, RefreshCw, Eye, Download, HardDrive, Shield, Filter, ExternalLink
+  Search, RefreshCw, Eye, HardDrive, Shield, Filter, ExternalLink, Link2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { evidenceService } from '../services/evidenceService';
@@ -9,16 +9,17 @@ import { profileService } from '../services/profileService';
 import DataTable from '../components/DataTable';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useAuth } from '../context/AuthContext';
+import EmptyState from '../components/ui/EmptyState';
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
 function EvidenceStatsBar({ stats, activeType, onSelectType }) {
   const items = [
-    { label: 'Total Files', value: stats?.total ?? 0, color: 'text-vx-text', bg: 'bg-vx-secondary/60', key: '', icon: HardDrive },
-    { label: 'Images', value: stats?.images ?? 0, color: 'text-blue-400', bg: 'bg-blue-500/10', key: 'image', icon: Image },
-    { label: 'Documents / PDFs', value: stats?.documents ?? 0, color: 'text-purple-400', bg: 'bg-purple-500/10', key: 'document', icon: FileText },
-    { label: 'Screenshots', value: stats?.byType?.screenshot ?? 0, color: 'text-yellow-400', bg: 'bg-yellow-500/10', key: 'screenshot', icon: Eye },
+    { label: 'Total Artifacts',   value: stats?.total ?? 0,                 color: 'text-vx-text',   bg: 'bg-vx-secondary', key: '',           icon: HardDrive },
+    { label: 'Images',            value: stats?.images ?? 0,                color: 'text-sky-400',   bg: 'bg-sky-500/10',   key: 'image',        icon: Image },
+    { label: 'Documents / PDFs',  value: stats?.documents ?? 0,             color: 'text-violet-400',bg: 'bg-violet-500/10',key: 'document',     icon: FileText },
+    { label: 'Screenshots',       value: stats?.byType?.screenshot ?? 0,    color: 'text-amber-400', bg: 'bg-amber-500/10', key: 'screenshot',   icon: Eye },
   ];
 
   return (
@@ -30,20 +31,22 @@ function EvidenceStatsBar({ stats, activeType, onSelectType }) {
           <motion.button
             key={item.key}
             type="button"
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01, y: -1 }}
+            whileTap={{ scale: 0.99 }}
             onClick={() => onSelectType(item.key)}
-            className={`card text-left p-4 cursor-pointer transition-all border ${
-              isActive ? 'border-vx-blue ring-1 ring-vx-blue/50' : 'border-vx-border hover:border-vx-border/80'
+            className={`bg-vx-card border rounded-xl p-4 text-left transition-all duration-150 cursor-pointer hover:border-vx-border-s hover:bg-vx-secondary/30 ${
+              isActive
+                ? 'border-vx-accent/50 bg-vx-accent-s shadow-[0_0_12px_rgba(255,77,31,0.12)]'
+                : 'border-vx-border'
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-vx-muted text-xs font-medium">{item.label}</span>
-              <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center`}>
-                <Icon className={`w-4 h-4 ${item.color}`} />
+              <span className="text-[10px] font-semibold text-vx-muted uppercase tracking-wider">{item.label}</span>
+              <div className={`w-7 h-7 rounded-lg ${item.bg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-3.5 h-3.5 ${item.color}`} />
               </div>
             </div>
-            <p className={`text-2xl font-bold ${item.color}`}>{item.value}</p>
+            <p className={`text-2xl font-bold font-mono tracking-tight ${item.color}`}>{item.value}</p>
           </motion.button>
         );
       })}
@@ -58,56 +61,94 @@ function EvidenceDetailModal({ evidence, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-        className="relative card w-full max-w-xl max-h-[90vh] overflow-y-auto"
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="relative bg-vx-elevated border border-vx-border-s rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl p-6"
       >
-        <div className="flex items-center justify-between mb-4 border-b border-vx-border pb-3">
-          <div className="flex items-center gap-2">
-            {isImage ? <Image className="w-5 h-5 text-blue-400" /> : <FileText className="w-5 h-5 text-purple-400" />}
-            <h3 className="text-vx-text font-semibold text-base truncate max-w-sm">{evidence.originalName}</h3>
+        <div className="flex items-center justify-between mb-5 pb-3 border-b border-vx-border">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {isImage ? (
+              <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
+                <Image className="w-4 h-4 text-sky-400" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4 text-violet-400" />
+              </div>
+            )}
+            <div className="truncate">
+              <h3 className="text-vx-text font-semibold text-base truncate">{evidence.originalName}</h3>
+              <p className="text-vx-muted text-xs font-mono">{evidence._id}</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-vx-muted hover:text-vx-text"><X className="w-5 h-5" /></button>
+          <button
+            onClick={onClose}
+            className="text-vx-muted hover:text-vx-text p-1.5 rounded-lg hover:bg-vx-secondary transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="space-y-4">
           {/* Metadata badges */}
           <div className="flex flex-wrap gap-2">
-            <span className="badge bg-vx-secondary text-vx-text font-mono uppercase">{evidence.evidenceType}</span>
-            <span className="badge bg-vx-blue/15 text-vx-blue border border-vx-blue/30">{evidence.mimeType}</span>
-            <span className="badge bg-vx-secondary text-vx-muted">{(evidence.fileSize / 1024).toFixed(1)} KB</span>
+            <span className="px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider rounded-md bg-vx-secondary text-vx-text border border-vx-border">
+              {evidence.evidenceType || 'Artifact'}
+            </span>
+            <span className="px-2.5 py-1 text-2xs font-mono rounded-md bg-vx-accent-s text-vx-accent border border-vx-accent/30">
+              {evidence.mimeType || 'unknown'}
+            </span>
+            <span className="px-2.5 py-1 text-2xs font-mono rounded-md bg-vx-secondary text-vx-sub border border-vx-border">
+              {evidence.fileSize ? `${(evidence.fileSize / 1024).toFixed(1)} KB` : 'N/A'}
+            </span>
           </div>
 
           {/* Description */}
-          <div className="bg-vx-secondary/40 rounded-xl p-4 border border-vx-border/50">
-            <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-1">Description</p>
-            <p className="text-vx-text text-sm leading-relaxed">{evidence.description}</p>
+          <div className="bg-vx-card rounded-xl p-4 border border-vx-border">
+            <p className="text-vx-muted text-[10px] font-semibold uppercase tracking-wider mb-1.5">Forensic Note / Description</p>
+            <p className="text-vx-text text-sm leading-relaxed">{evidence.description || 'No description recorded.'}</p>
           </div>
 
           {/* Detail specs */}
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="bg-vx-secondary/30 rounded-lg p-3">
-              <span className="text-vx-muted block mb-0.5">Uploaded By</span>
-              <span className="text-vx-text font-medium">{evidence.uploadedBy?.name || 'Authorized Analyst'}</span>
+            <div className="bg-vx-card rounded-lg p-3 border border-vx-border">
+              <span className="text-vx-muted text-[10px] uppercase font-semibold block mb-0.5">Uploaded By</span>
+              <span className="text-vx-text font-medium">{evidence.uploadedBy?.name || evidence.uploadedBy?.email || 'Authorized Analyst'}</span>
             </div>
-            <div className="bg-vx-secondary/30 rounded-lg p-3">
-              <span className="text-vx-muted block mb-0.5">Upload Date</span>
-              <span className="text-vx-text font-medium">{new Date(evidence.createdAt).toLocaleString()}</span>
+            <div className="bg-vx-card rounded-lg p-3 border border-vx-border">
+              <span className="text-vx-muted text-[10px] uppercase font-semibold block mb-0.5">Upload Date</span>
+              <span className="text-vx-text font-medium">{evidence.createdAt ? new Date(evidence.createdAt).toLocaleString() : '—'}</span>
             </div>
             {evidence.profile && (
-              <div className="bg-vx-secondary/30 rounded-lg p-3 col-span-2">
-                <span className="text-vx-muted block mb-0.5">Linked Target Profile</span>
-                <span className="text-vx-blue font-mono font-medium">@{evidence.profile.username || evidence.profile}</span>
+              <div className="bg-vx-card rounded-lg p-3 border border-vx-border col-span-2">
+                <span className="text-vx-muted text-[10px] uppercase font-semibold block mb-0.5">Linked Target Profile</span>
+                <span className="text-vx-accent font-mono font-medium">
+                  @{typeof evidence.profile === 'object' ? evidence.profile.username : evidence.profile}
+                  {evidence.profile?.platform ? ` (${evidence.profile.platform})` : ''}
+                </span>
+              </div>
+            )}
+            {evidence.report && (
+              <div className="bg-vx-card rounded-lg p-3 border border-vx-border col-span-2">
+                <span className="text-vx-muted text-[10px] uppercase font-semibold block mb-0.5">Associated Case / Report</span>
+                <span className="text-sky-400 font-mono font-medium">
+                  {typeof evidence.report === 'object' ? (evidence.report.caseId || evidence.report.title || 'Linked Report') : evidence.report}
+                </span>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end pt-2">
-            <button onClick={onClose} className="btn-secondary text-sm">Close</button>
+          <div className="flex justify-end pt-3 border-t border-vx-border">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium rounded-lg bg-vx-secondary border border-vx-border hover:border-vx-border-s text-vx-text transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       </motion.div>
@@ -128,61 +169,87 @@ function UploadPanel({ onUploaded }) {
   const fileRef = useRef();
 
   useEffect(() => {
-    profileService.getProfiles({ limit: 50 }).then(r => { if (r.success) setProfiles(r.data); }).catch(() => {});
+    profileService.getProfiles({ limit: 50 })
+      .then(r => { if (r.success) setProfiles(r.data || []); })
+      .catch(() => {});
   }, []);
 
   const handleFile = (f) => {
     setError('');
-    if (!ALLOWED_TYPES.includes(f.type)) { setError('File type not allowed. Use JPEG, PNG, WebP, GIF, or PDF.'); return; }
-    if (f.size > MAX_SIZE) { setError(`File too large. Maximum 5MB allowed. Your file: ${(f.size / 1024 / 1024).toFixed(1)}MB`); return; }
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      setError('File type not allowed. Supported formats: JPEG, PNG, WebP, GIF, or PDF.');
+      return;
+    }
+    if (f.size > MAX_SIZE) {
+      setError(`File exceeds limit. Maximum 5MB allowed. Selected file: ${(f.size / 1024 / 1024).toFixed(1)}MB`);
+      return;
+    }
     setFile(f);
   };
 
   const handleDrop = (e) => {
-    e.preventDefault(); setDragging(false);
+    e.preventDefault();
+    setDragging(false);
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   };
 
   const handleUpload = async () => {
-    if (!file) { setError('Please select a file'); return; }
-    if (!description || description.length < 10) { setError('Description must be at least 10 characters'); return; }
-    setLoading(true); setError(''); setSuccess('');
+    if (!file) {
+      setError('Please select a file to upload');
+      return;
+    }
+    if (!description || description.trim().length < 10) {
+      setError('Description must be at least 10 characters detailing forensic context');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setSuccess('');
     try {
       const fd = new FormData();
       fd.append('file', file);
-      fd.append('description', description);
+      fd.append('description', description.trim());
       fd.append('evidenceType', evidenceType);
       if (profileId) fd.append('profileId', profileId);
+
       const res = await evidenceService.uploadEvidence(fd);
       if (res.success) {
-        setSuccess('Evidence uploaded successfully');
-        setFile(null); setDescription(''); setProfileId('');
+        setSuccess('Forensic evidence uploaded and indexed successfully.');
+        setFile(null);
+        setDescription('');
+        setProfileId('');
         onUploaded();
         setTimeout(() => setSuccess(''), 4000);
       } else {
-        setError(res.message);
+        setError(res.message || 'Upload was rejected by server');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Upload failed');
+      setError(err.response?.data?.message || err.userMessage || 'Upload failed. Please verify network connectivity.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="card">
-      <h3 className="text-vx-text font-semibold mb-4">Upload Forensic Evidence</h3>
+    <div className="bg-vx-card border border-vx-border rounded-xl p-5 space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-vx-border">
+        <div>
+          <span className="text-[10px] font-semibold text-vx-accent uppercase tracking-wider block">Artifact Ingestion</span>
+          <h3 className="text-vx-text font-semibold text-sm">Upload Forensic Evidence</h3>
+        </div>
+        <span className="text-xs text-vx-muted font-mono">Max 5MB · Cryptographically Logged</span>
+      </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5 mb-4">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <p className="text-red-400 text-xs">{error}</p>
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2.5 mb-4">
-          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-          <p className="text-green-400 text-sm">{success}</p>
+        <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2.5">
+          <Check className="w-4 h-4 text-green-400 shrink-0" />
+          <p className="text-green-400 text-xs">{success}</p>
         </div>
       )}
 
@@ -192,40 +259,70 @@ function UploadPanel({ onUploaded }) {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         onClick={() => fileRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-7 text-center cursor-pointer transition-all ${
-          dragging ? 'border-vx-blue bg-vx-blue/10' : file ? 'border-green-500/40 bg-green-500/5' : 'border-vx-border hover:border-vx-blue/50 hover:bg-vx-blue/5'
+        className={`border border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+          dragging
+            ? 'border-vx-accent bg-vx-accent-s/20 scale-[0.99]'
+            : file
+            ? 'border-green-500/40 bg-green-500/5'
+            : 'border-vx-border hover:border-vx-border-s hover:bg-vx-secondary/30'
         }`}
       >
-        <input ref={fileRef} type="file" className="hidden" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf"
+          onChange={e => e.target.files[0] && handleFile(e.target.files[0])}
+        />
         {file ? (
           <div className="flex items-center justify-center gap-3">
-            {file.type.startsWith('image/') ? <Image className="w-8 h-8 text-green-400" /> : <FileText className="w-8 h-8 text-purple-400" />}
+            {file.type.startsWith('image/') ? (
+              <Image className="w-7 h-7 text-green-400" />
+            ) : (
+              <FileText className="w-7 h-7 text-violet-400" />
+            )}
             <div className="text-left">
-              <p className="text-vx-text font-medium text-sm">{file.name}</p>
-              <p className="text-vx-muted text-xs">{(file.size / 1024).toFixed(0)} KB · {file.type}</p>
+              <p className="text-vx-text font-medium text-xs truncate max-w-sm">{file.name}</p>
+              <p className="text-vx-muted text-[11px] font-mono">{(file.size / 1024).toFixed(0)} KB · {file.type}</p>
             </div>
-            <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="ml-2 text-vx-muted hover:text-vx-danger p-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); setFile(null); }}
+              className="ml-2 text-vx-muted hover:text-red-400 p-1 rounded transition-colors"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
         ) : (
           <>
-            <Upload className="w-9 h-9 text-vx-muted mx-auto mb-2" />
-            <p className="text-vx-text text-sm font-medium">Drag and drop file here or click to browse</p>
-            <p className="text-vx-muted text-xs mt-1">JPEG, PNG, WebP, GIF, PDF · Maximum size 5MB</p>
+            <Upload className="w-8 h-8 text-vx-muted mx-auto mb-2 opacity-80" />
+            <p className="text-vx-text text-xs font-medium">Drag & drop forensic artifact here or click to browse</p>
+            <p className="text-vx-muted text-[11px] mt-1 font-mono">JPEG, PNG, WebP, GIF, PDF up to 5MB</p>
           </>
         )}
       </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="space-y-3 pt-1">
         <div>
-          <label className="label">Evidence Description * <span className="text-vx-muted font-normal">(min 10 characters)</span></label>
-          <textarea className="input resize-none" rows={3} placeholder="Describe what this evidence shows..." value={description} onChange={e => setDescription(e.target.value)} maxLength={500} />
+          <label className="text-[10px] font-semibold text-vx-muted uppercase tracking-wider block mb-1">
+            Forensic Description * <span className="font-normal text-vx-muted lowercase">(min 10 characters)</span>
+          </label>
+          <textarea
+            className="w-full bg-vx-secondary/60 border border-vx-border rounded-lg px-3 py-2 text-xs text-vx-text placeholder-vx-muted focus:outline-none focus:border-vx-accent focus:ring-1 focus:ring-vx-accent/30 resize-none transition-colors"
+            rows={2}
+            placeholder="Document what this evidence demonstrates (e.g. matching bot-cluster profile banners, automated tweet frequency)..."
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            maxLength={500}
+          />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label">Evidence Type</label>
-            <select className="input" value={evidenceType} onChange={e => setEvidenceType(e.target.value)}>
+            <label className="text-[10px] font-semibold text-vx-muted uppercase tracking-wider block mb-1">Evidence Type</label>
+            <select
+              className="w-full bg-vx-secondary/60 border border-vx-border rounded-lg px-3 py-2 text-xs text-vx-text focus:outline-none focus:border-vx-accent focus:ring-1 focus:ring-vx-accent/30 transition-colors"
+              value={evidenceType}
+              onChange={e => setEvidenceType(e.target.value)}
+            >
               <option value="screenshot">Screenshot</option>
               <option value="document">Document</option>
               <option value="report">Report</option>
@@ -233,15 +330,29 @@ function UploadPanel({ onUploaded }) {
             </select>
           </div>
           <div>
-            <label className="label">Associated Profile</label>
-            <select className="input" value={profileId} onChange={e => setProfileId(e.target.value)}>
-              <option value="">None</option>
-              {profiles.map(p => <option key={p._id} value={p._id}>@{p.username} ({p.platform})</option>)}
+            <label className="text-[10px] font-semibold text-vx-muted uppercase tracking-wider block mb-1">Associated Profile</label>
+            <select
+              className="w-full bg-vx-secondary/60 border border-vx-border rounded-lg px-3 py-2 text-xs text-vx-text focus:outline-none focus:border-vx-accent focus:ring-1 focus:ring-vx-accent/30 transition-colors"
+              value={profileId}
+              onChange={e => setProfileId(e.target.value)}
+            >
+              <option value="">None (Unassigned)</option>
+              {profiles.map(p => (
+                <option key={p._id} value={p._id}>@{p.username} ({p.platform || 'General'})</option>
+              ))}
             </select>
           </div>
         </div>
-        <button onClick={handleUpload} className="btn-primary w-full justify-center" disabled={loading}>
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : <><Upload className="w-4 h-4" /> Upload Evidence</>}
+        <button
+          onClick={handleUpload}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-gradient-to-r from-vx-accent to-vx-accent-d text-white font-medium text-xs shadow-[0_2px_10px_rgba(255,77,31,0.25)] hover:brightness-110 active:brightness-95 transition-all disabled:opacity-50 cursor-pointer"
+          disabled={loading}
+        >
+          {loading ? (
+            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Ingesting Artifact…</>
+          ) : (
+            <><Upload className="w-3.5 h-3.5" /> Upload to Evidence Vault</>
+          )}
         </button>
       </div>
     </div>
@@ -268,8 +379,8 @@ export default function Evidence() {
         evidenceService.getEvidence({ page, limit: 20 }),
         evidenceService.getStatistics(),
       ]);
-      if (listRes.success) {
-        setEvidence(listRes.data);
+      if (listRes?.success) {
+        setEvidence(listRes.data || []);
         setTotalPages(listRes.pagination?.pages || 1);
       }
       if (statsRes?.success) {
@@ -279,7 +390,9 @@ export default function Evidence() {
     setLoading(false);
   }, [page]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleDelete = async () => {
     if (!toDelete) return;
@@ -292,10 +405,9 @@ export default function Evidence() {
 
   // Client-side search and type filter
   const filtered = evidence.filter(item => {
+    const searchTarget = `${item.originalName || ''} ${item.description || ''} ${item.evidenceType || ''} ${item.profile?.username || ''} ${item.uploadedBy?.name || ''}`.toLowerCase();
     const matchSearch = filters.search
-      ? item.originalName?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        item.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        item.evidenceType?.toLowerCase().includes(filters.search.toLowerCase())
+      ? searchTarget.includes(filters.search.toLowerCase())
       : true;
 
     const matchType = filters.type
@@ -311,52 +423,80 @@ export default function Evidence() {
 
   const columns = [
     {
-      key: 'originalName', label: 'File Name',
+      key: 'originalName',
+      label: 'Artifact / File Name',
       render: (v, row) => (
-        <div className="flex items-center gap-2">
-          {row.mimeType?.startsWith('image/') ? (
-            <Image className="w-4 h-4 text-blue-400 flex-shrink-0" />
-          ) : (
-            <FileText className="w-4 h-4 text-purple-400 flex-shrink-0" />
-          )}
-          <span className="text-vx-text text-sm font-medium truncate max-w-xs">{v}</span>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-vx-secondary flex items-center justify-center shrink-0 border border-vx-border">
+            {row.mimeType?.startsWith('image/') ? (
+              <Image className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            ) : (
+              <FileText className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            )}
+          </div>
+          <div className="min-w-0 truncate">
+            <span className="text-vx-text text-xs font-medium truncate block max-w-xs">{v}</span>
+            {row.profile && (
+              <span className="text-vx-accent text-[10px] font-mono block truncate">
+                @{typeof row.profile === 'object' ? row.profile.username : row.profile}
+              </span>
+            )}
+          </div>
         </div>
       ),
     },
     {
-      key: 'evidenceType', label: 'Type',
-      render: (v) => <span className="badge bg-vx-secondary text-vx-muted font-mono uppercase">{v}</span>,
+      key: 'evidenceType',
+      label: 'Type',
+      render: (v) => (
+        <span className="px-2 py-0.5 text-2xs font-mono font-medium rounded-md bg-vx-secondary text-vx-sub border border-vx-border uppercase">
+          {v || 'Artifact'}
+        </span>
+      ),
     },
     {
-      key: 'description', label: 'Description',
-      render: (v) => <p className="text-vx-muted text-xs truncate max-w-sm">{v}</p>,
+      key: 'description',
+      label: 'Forensic Description',
+      render: (v) => <p className="text-vx-muted text-xs truncate max-w-sm">{v || '—'}</p>,
     },
     {
-      key: 'fileSize', label: 'Size',
-      render: (v) => <span className="text-vx-muted text-xs font-mono">{(v / 1024).toFixed(0)} KB</span>,
+      key: 'fileSize',
+      label: 'Size',
+      render: (v) => (
+        <span className="text-vx-muted text-xs font-mono">
+          {v ? `${(v / 1024).toFixed(0)} KB` : '—'}
+        </span>
+      ),
     },
     {
-      key: 'uploadedBy', label: 'Investigator',
-      render: (v) => <span className="text-vx-muted text-xs">{v?.name || '—'}</span>,
+      key: 'uploadedBy',
+      label: 'Investigator',
+      render: (v) => <span className="text-vx-sub text-xs">{v?.name || v?.email || '—'}</span>,
     },
     {
-      key: 'createdAt', label: 'Date',
-      render: (v) => <span className="text-vx-muted text-xs">{new Date(v).toLocaleDateString()}</span>,
+      key: 'createdAt',
+      label: 'Date Logged',
+      render: (v) => (
+        <span className="text-vx-muted text-xs font-mono">
+          {v ? new Date(v).toLocaleDateString() : '—'}
+        </span>
+      ),
     },
     {
-      key: '_id', label: 'Actions',
+      key: '_id',
+      label: 'Actions',
       render: (_, row) => (
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSelectedItem(row)}
-            className="flex items-center gap-1 text-vx-blue hover:text-blue-400 text-xs font-medium transition-colors"
+            className="flex items-center gap-1 text-vx-accent hover:text-vx-accent-d text-xs font-medium transition-colors cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5" /> View
           </button>
           {canUpload && (
             <button
               onClick={() => setToDelete(row)}
-              className="text-vx-danger/70 hover:text-vx-danger transition-colors p-1"
+              className="text-vx-muted hover:text-red-400 transition-colors p-1 rounded cursor-pointer"
               title="Delete evidence"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -371,7 +511,7 @@ export default function Evidence() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
       className="space-y-6"
     >
       {/* Stats bar */}
@@ -384,36 +524,59 @@ export default function Evidence() {
       {/* Upload Panel */}
       {canUpload && <UploadPanel onUploaded={fetchData} />}
 
-      {/* Library */}
-      <div className="card space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-vx-border">
-          <div>
-            <h3 className="text-vx-text font-semibold">Evidence Vault</h3>
-            <p className="text-vx-muted text-xs mt-0.5">Cryptographically logged evidence items and forensic captures.</p>
+      {/* Vault Table Card */}
+      <div className="bg-vx-card border border-vx-border rounded-xl p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-vx-border">
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-vx-text font-semibold text-sm">Evidence Vault</h3>
+                <span className="px-2 py-0.5 text-2xs font-mono font-medium rounded-full bg-vx-accent-s text-vx-accent border border-vx-accent/25">
+                  {filtered.length} total
+                </span>
+              </div>
+              <p className="text-vx-muted text-xs mt-0.5">Cryptographically logged evidence items and forensic captures.</p>
+            </div>
           </div>
 
           {/* Search toolbar */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-44">
+            <div className="relative min-w-48">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-vx-muted" />
               <input
                 type="text"
-                placeholder="Search evidence…"
-                className="input pl-8 py-1.5 text-xs"
+                placeholder="Search evidence or target…"
+                className="w-full bg-vx-secondary/60 border border-vx-border rounded-lg pl-8 pr-7 py-1.5 text-xs text-vx-text placeholder-vx-muted focus:outline-none focus:border-vx-accent transition-colors"
                 value={filters.search}
-                onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+                onChange={e => {
+                  setFilters(f => ({ ...f, search: e.target.value }));
+                  setPage(1);
+                }}
               />
+              {filters.search && (
+                <button
+                  type="button"
+                  onClick={() => setFilters(f => ({ ...f, search: '' }))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-vx-muted hover:text-vx-text"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
             {filters.type && (
               <button
                 onClick={() => setFilters(f => ({ ...f, type: '' }))}
-                className="btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1 text-vx-blue"
+                className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-vx-secondary border border-vx-border text-vx-accent hover:border-vx-accent/30 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 Clear filter <X className="w-3 h-3" />
               </button>
             )}
-            <button onClick={fetchData} className="btn-secondary text-xs py-1.5 px-2.5">
-              <RefreshCw className="w-3 h-3" />
+            <button
+              onClick={fetchData}
+              className="p-1.5 text-vx-muted hover:text-vx-text rounded-lg bg-vx-secondary border border-vx-border hover:border-vx-border-s transition-colors cursor-pointer"
+              title="Refresh evidence"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
