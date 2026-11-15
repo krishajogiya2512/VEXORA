@@ -141,17 +141,23 @@ reportSchema.index({ createdAt: -1 });
 
 // ── Static method: get next case ID ──────────────────────────────────────────
 reportSchema.statics.getNextCaseId = async function () {
-  const lastReport = await this.findOne({}, { caseId: 1 })
-    .sort({ caseId: -1 })
-    .lean();
+  try {
+    const lastReport = await this.findOne({ caseId: { $regex: /^VXRA-\d+$/ } }, { caseId: 1 })
+      .sort({ caseId: -1 })
+      .lean();
 
-  if (!lastReport) {
-    return 'VXRA-00001';
+    if (!lastReport || !lastReport.caseId) {
+      return 'VXRA-00001';
+    }
+
+    const parts = lastReport.caseId.split('-');
+    const lastNumber = parseInt(parts[1], 10);
+    if (isNaN(lastNumber)) return 'VXRA-00001';
+    const nextNumber = lastNumber + 1;
+    return `VXRA-${String(nextNumber).padStart(5, '0')}`;
+  } catch (_) {
+    return `VXRA-${String(Date.now()).slice(-5)}`;
   }
-
-  const lastNumber = parseInt(lastReport.caseId.split('-')[1], 10);
-  const nextNumber = lastNumber + 1;
-  return `VXRA-${String(nextNumber).padStart(5, '0')}`;
 };
 
 // ── Pre-validate: auto-generate caseId ────────────────────────────────────────

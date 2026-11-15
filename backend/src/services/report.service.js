@@ -34,26 +34,73 @@ class ReportService {
   }
 
   async getReports(query, page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Sanitize query to prevent invalid or empty criteria
+    const cleanQuery = {};
+    for (const [k, v] of Object.entries(query || {})) {
+      if (v !== undefined && v !== null && v !== '') {
+        cleanQuery[k] = v;
+      }
+    }
+
     const [reports, total] = await Promise.all([
-      Report.find(query)
-        .populate('profile', 'username platform')
-        .populate('submittedBy', 'name email')
-        .populate('assignedTo', 'name email')
-        .sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Report.countDocuments(query),
+      Report.find(cleanQuery)
+        .populate('profile', 'username platform displayName')
+        .populate('submittedBy', 'name email role')
+        .populate('assignedTo', 'name email role')
+        .populate('detection', 'riskScore riskLevel detectionMethod')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Report.countDocuments(cleanQuery),
     ]);
-    return { reports, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+
+    // Handle missing or null populated references gracefully
+    const safeReports = (reports || []).map(r => ({
+      ...r,
+      profile: r.profile || { username: 'unknown', platform: 'other' },
+      submittedBy: r.submittedBy || { name: 'Investigator' },
+      assignedTo: r.assignedTo || null,
+      analystNotes: r.analystNotes || [],
+      statusHistory: r.statusHistory || [],
+      evidence: r.evidence || [],
+    }));
+
+    return {
+      reports: safeReports,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum) || 1,
+      },
+    };
   }
 
   async getReportById(id) {
-    return Report.findById(id)
+    const report = await Report.findById(id)
       .populate('detection')
       .populate('profile')
       .populate('submittedBy', 'name email role')
       .populate('assignedTo', 'name email role')
       .populate('analystNotes.addedBy', 'name')
-      .populate('statusHistory.changedBy', 'name');
+      .populate('statusHistory.changedBy', 'name')
+      .lean();
+
+    if (!report) return null;
+
+    return {
+      ...report,
+      profile: report.profile || { username: 'unknown', platform: 'other' },
+      submittedBy: report.submittedBy || { name: 'Investigator' },
+      analystNotes: report.analystNotes || [],
+      statusHistory: report.statusHistory || [],
+      evidence: report.evidence || [],
+    };
   }
 
   async updateReportStatus(id, status, userId, reason) {

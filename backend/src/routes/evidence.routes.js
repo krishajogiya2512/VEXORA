@@ -8,6 +8,7 @@ const Evidence = require('../models/Evidence');
 const { protect } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response');
+const mongoose = require('mongoose');
 const multer = require('multer');
 
 // Multer config
@@ -59,19 +60,50 @@ router.post('/', authorize('ADMIN', 'ANALYST'), upload.single('file'), async (re
 // GET /api/evidence
 router.get('/', async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 20));
     const skip = (page - 1) * limit;
     const query = {};
-    if (req.query.profileId) query.profile = req.query.profileId;
-    if (req.query.detectionId) query.detection = req.query.detectionId;
-    if (req.query.reportId) query.report = req.query.reportId;
+
+    if (req.query.profileId && mongoose.Types.ObjectId.isValid(req.query.profileId)) {
+      query.profile = req.query.profileId;
+    }
+    if (req.query.detectionId && mongoose.Types.ObjectId.isValid(req.query.detectionId)) {
+      query.detection = req.query.detectionId;
+    }
+    if (req.query.reportId && mongoose.Types.ObjectId.isValid(req.query.reportId)) {
+      query.report = req.query.reportId;
+    }
+    if (req.query.evidenceType && req.query.evidenceType !== 'all') {
+      query.evidenceType = req.query.evidenceType;
+    }
 
     const [evidence, total] = await Promise.all([
-      Evidence.find(query).populate('uploadedBy', 'name email').populate('profile', 'username platform').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Evidence.find(query)
+        .populate('uploadedBy', 'name email role')
+        .populate('profile', 'username platform')
+        .populate('report', 'caseId title')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       Evidence.countDocuments(query),
     ]);
-    return paginatedResponse(res, 'Evidence retrieved', evidence, { page, limit, total, pages: Math.ceil(total / limit) });
+
+    // Handle missing/optional populated values cleanly
+    const safeEvidence = (evidence || []).map(item => ({
+      ...item,
+      uploadedBy: item.uploadedBy || { name: 'Investigator' },
+      profile: item.profile || null,
+      report: item.report || null,
+    }));
+
+    return paginatedResponse(res, 'Evidence retrieved', safeEvidence, {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit) || 1,
+    });
   } catch (error) { next(error); }
 });
 
