@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search, RefreshCw, Eye, FileText, ChevronDown, X, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, Search, RefreshCw, Eye, FileText, X, Loader2, Clock, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { reportService } from '../services/reportService';
 import { profileService } from '../services/profileService';
 import { detectionService } from '../services/detectionService';
@@ -10,6 +11,45 @@ import { useAuth } from '../context/AuthContext';
 
 const STATUSES = ['', 'PENDING', 'UNDER_REVIEW', 'VERIFIED_SUSPICIOUS', 'INSUFFICIENT_EVIDENCE', 'ESCALATED', 'CLOSED'];
 const SEVERITIES = ['', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+function StatsBar({ stats, activeStatus, onFilterStatus }) {
+  const items = [
+    { label: 'Total Reports', value: stats?.total ?? 0, color: 'text-vx-text', bg: 'bg-vx-secondary/60', key: '', icon: FileText },
+    { label: 'Pending', value: stats?.byStatus?.PENDING ?? 0, color: 'text-yellow-400', bg: 'bg-yellow-500/10', key: 'PENDING', icon: Clock },
+    { label: 'Under Review', value: stats?.byStatus?.UNDER_REVIEW ?? 0, color: 'text-blue-400', bg: 'bg-blue-500/10', key: 'UNDER_REVIEW', icon: TrendingUp },
+    { label: 'Resolved / Closed', value: stats?.byStatus?.CLOSED ?? 0, color: 'text-green-400', bg: 'bg-green-500/10', key: 'CLOSED', icon: CheckCircle },
+    { label: 'High / Critical', value: (stats?.bySeverity?.HIGH ?? 0) + (stats?.bySeverity?.CRITICAL ?? 0), color: 'text-red-400', bg: 'bg-red-500/10', key: '_highcritical', icon: AlertTriangle },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {items.map(item => {
+        const Icon = item.icon;
+        const isActive = activeStatus === item.key || (item.key === '' && !activeStatus);
+        return (
+          <motion.button
+            key={item.key}
+            type="button"
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onFilterStatus(item.key === '_highcritical' ? '' : item.key)}
+            className={`card text-left p-4 cursor-pointer transition-all border ${
+              isActive ? 'border-vx-blue ring-1 ring-vx-blue/50' : 'border-vx-border hover:border-vx-border/80'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-vx-muted text-xs font-medium">{item.label}</span>
+              <div className={`w-7 h-7 rounded-lg ${item.bg} flex items-center justify-center`}>
+                <Icon className={`w-3.5 h-3.5 ${item.color}`} />
+              </div>
+            </div>
+            <p className={`text-2xl font-bold ${item.color}`}>{item.value}</p>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+}
 
 function CreateReportModal({ onClose, onCreated }) {
   const [profiles, setProfiles] = useState([]);
@@ -54,9 +94,15 @@ function CreateReportModal({ onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative card w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+        className="relative card w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-vx-text font-semibold text-lg">Submit New Report</h3>
           <button onClick={onClose} className="text-vx-muted hover:text-vx-text"><X className="w-5 h-5" /></button>
@@ -92,14 +138,14 @@ function CreateReportModal({ onClose, onCreated }) {
             <label className="label">Description *</label>
             <textarea className="input resize-none" rows={4} placeholder="Detailed description of suspicious activity..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} maxLength={2000} />
           </div>
-          <div className="flex gap-3 justify-end">
+          <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={onClose} className="btn-secondary text-sm">Cancel</button>
             <button type="submit" className="btn-primary text-sm" disabled={loading}>
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : <><FileText className="w-4 h-4" /> Submit Report</>}
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -110,7 +156,6 @@ function ReportDetailModal({ report, onClose, onStatusUpdate }) {
   const [status, setStatus] = useState(report.status);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
-
   const canEdit = user?.role === 'ADMIN' || user?.role === 'ANALYST';
 
   const handleStatusUpdate = async () => {
@@ -134,74 +179,92 @@ function ReportDetailModal({ report, onClose, onStatusUpdate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative card w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+        className="relative card w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-vx-text font-semibold text-lg">{report.caseId}</h3>
-            <p className="text-vx-muted text-xs">{report.title}</p>
+            <p className="text-vx-muted text-xs mt-0.5">{report.title}</p>
           </div>
           <button onClick={onClose} className="text-vx-muted hover:text-vx-text"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="space-y-5">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 items-center">
             <StatusBadge status={report.status} />
             <span className={`badge ${report.severity === 'CRITICAL' ? 'badge-critical' : report.severity === 'HIGH' ? 'badge-high' : report.severity === 'MEDIUM' ? 'badge-medium' : 'badge-low'}`}>
               {report.severity}
             </span>
-            <span className="text-vx-muted text-xs">By {report.submittedBy?.name}</span>
+            <span className="text-vx-muted text-xs ml-auto">Submitted by {report.submittedBy?.name || 'Unknown'}</span>
           </div>
 
-          <p className="text-vx-text text-sm">{report.description}</p>
+          <div className="bg-vx-secondary/40 border border-vx-border/60 rounded-xl p-4">
+            <h4 className="text-vx-muted text-xs uppercase tracking-wider font-semibold mb-2">Description</h4>
+            <p className="text-vx-text text-sm leading-relaxed">{report.description}</p>
+          </div>
 
-          {/* Analyst notes */}
           <div>
             <h4 className="text-vx-text font-medium text-sm mb-3">Investigation Notes ({report.analystNotes?.length || 0})</h4>
-            {report.analystNotes?.length === 0 && <p className="text-vx-muted text-xs">No notes yet.</p>}
-            {report.analystNotes?.map((n, i) => (
-              <div key={i} className="bg-vx-secondary/50 border border-vx-border rounded-lg px-3 py-2 mb-2">
-                <p className="text-vx-text text-xs">{n.note}</p>
-                <p className="text-vx-muted text-xs mt-1">{n.addedBy?.name} · {new Date(n.addedAt).toLocaleString()}</p>
+            {report.analystNotes?.length === 0 ? (
+              <p className="text-vx-muted text-xs">No investigation notes recorded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {report.analystNotes?.map((n, i) => (
+                  <div key={i} className="bg-vx-secondary/50 border border-vx-border rounded-lg px-3 py-2">
+                    <p className="text-vx-text text-xs leading-relaxed">{n.note}</p>
+                    <p className="text-vx-muted text-[10px] mt-1.5">{n.addedBy?.name || 'Analyst'} · {new Date(n.addedAt).toLocaleString()}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
             {canEdit && (
               <div className="mt-3 flex gap-2">
-                <input type="text" className="input text-sm flex-1" placeholder="Add investigation note..." value={note} onChange={e => setNote(e.target.value)} />
-                <button onClick={handleAddNote} className="btn-secondary text-sm py-2 px-3" disabled={loading || note.length < 5}>Add</button>
+                <input type="text" className="input text-sm flex-1" placeholder="Add investigation note (min 5 chars)..." value={note} onChange={e => setNote(e.target.value)} />
+                <button onClick={handleAddNote} className="btn-secondary text-sm py-2 px-3" disabled={loading || note.trim().length < 5}>Add</button>
               </div>
             )}
           </div>
 
-          {/* Status update */}
           {canEdit && (
             <div className="border-t border-vx-border pt-4">
               <h4 className="text-vx-text font-medium text-sm mb-3">Update Status</h4>
-              <div className="flex gap-2">
-                <select className="input text-sm flex-1" value={status} onChange={e => setStatus(e.target.value)}>
-                  {STATUSES.filter(Boolean).map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select className="input text-sm sm:w-48" value={status} onChange={e => setStatus(e.target.value)}>
+                  {STATUSES.filter(Boolean).map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
                 </select>
-                <input type="text" className="input text-sm flex-1" placeholder="Reason (optional)" value={reason} onChange={e => setReason(e.target.value)} />
-                <button onClick={handleStatusUpdate} className="btn-primary text-sm py-2 px-3" disabled={loading}>Update</button>
+                <input type="text" className="input text-sm flex-1" placeholder="Reason for change (optional)" value={reason} onChange={e => setReason(e.target.value)} />
+                <button onClick={handleStatusUpdate} className="btn-primary text-sm py-2 px-4" disabled={loading}>Update</button>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 export default function Reports() {
+  const { user } = useAuth();
+  const location = useLocation();
   const [data, setData] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({ status: '', severity: '', search: '' });
+  const [filters, setFilters] = useState({
+    status: location.state?.filterStatus || '',
+    severity: '',
+    search: '',
+  });
   const [showCreate, setShowCreate] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
-  const { user } = useAuth();
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -209,11 +272,15 @@ export default function Reports() {
       const params = { page, limit: 20 };
       if (filters.status) params.status = filters.status;
       if (filters.severity) params.severity = filters.severity;
-      const res = await reportService.getReports(params);
-      if (res.success) {
-        setData(res.data);
-        setTotalPages(res.pagination?.pages || 1);
+      const [listRes, statsRes] = await Promise.all([
+        reportService.getReports(params),
+        reportService.getStatistics(),
+      ]);
+      if (listRes.success) {
+        setData(listRes.data);
+        setTotalPages(listRes.pagination?.pages || 1);
       }
+      if (statsRes.success) setStats(statsRes.data);
     } catch {}
     setLoading(false);
   }, [page, filters]);
@@ -226,8 +293,8 @@ export default function Reports() {
     : data;
 
   const columns = [
-    { key: 'caseId', label: 'Case ID', render: (v) => <span className="font-mono text-vx-blue text-sm">{v}</span> },
-    { key: 'title', label: 'Title', render: (v) => <p className="text-vx-text text-sm truncate max-w-48">{v}</p> },
+    { key: 'caseId', label: 'Case ID', render: (v) => <span className="font-mono text-vx-blue text-sm font-semibold">{v}</span> },
+    { key: 'title', label: 'Title', render: (v) => <p className="text-vx-text text-sm truncate max-w-48 font-medium">{v}</p> },
     { key: 'severity', label: 'Severity', render: (v) => (
       <span className={`badge ${v === 'CRITICAL' ? 'badge-critical' : v === 'HIGH' ? 'badge-high' : v === 'MEDIUM' ? 'badge-medium' : 'badge-low'}`}>{v}</span>
     )},
@@ -235,14 +302,26 @@ export default function Reports() {
     { key: 'submittedBy', label: 'Submitted By', render: (v) => <span className="text-vx-muted text-xs">{v?.name || '—'}</span> },
     { key: 'createdAt', label: 'Date', render: (v) => <span className="text-vx-muted text-xs">{new Date(v).toLocaleDateString()}</span> },
     { key: '_id', label: 'Actions', render: (_, row) => (
-      <button onClick={() => setSelectedReport(row)} className="flex items-center gap-1 text-vx-blue hover:text-blue-400 text-xs font-medium">
+      <button onClick={() => setSelectedReport(row)} className="flex items-center gap-1 text-vx-blue hover:text-blue-400 text-xs font-medium transition-colors">
         <Eye className="w-3.5 h-3.5" /> View
       </button>
     )},
   ];
 
   return (
-    <div className="space-y-5">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-5"
+    >
+      {/* Stats bar */}
+      <StatsBar
+        stats={stats}
+        activeStatus={filters.status}
+        onFilterStatus={(s) => { setFilters(f => ({ ...f, status: f.status === s ? '' : s })); setPage(1); }}
+      />
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-48">
@@ -258,7 +337,7 @@ export default function Reports() {
           {SEVERITIES.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <button onClick={() => { setFilters({ status: '', severity: '', search: '' }); setPage(1); }} className="btn-secondary text-sm py-2">
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-3.5 h-3.5" /> Reset
         </button>
         {(user?.role === 'ADMIN' || user?.role === 'ANALYST') && (
           <button onClick={() => setShowCreate(true)} className="btn-primary text-sm">
@@ -273,8 +352,10 @@ export default function Reports() {
         page={page} totalPages={totalPages} onPageChange={setPage}
       />
 
-      {showCreate && <CreateReportModal onClose={() => setShowCreate(false)} onCreated={() => fetchReports()} />}
-      {selectedReport && <ReportDetailModal report={selectedReport} onClose={() => setSelectedReport(null)} onStatusUpdate={() => { setSelectedReport(null); fetchReports(); }} />}
-    </div>
+      <AnimatePresence>
+        {showCreate && <CreateReportModal onClose={() => setShowCreate(false)} onCreated={() => fetchReports()} />}
+        {selectedReport && <ReportDetailModal report={selectedReport} onClose={() => setSelectedReport(null)} onStatusUpdate={() => { setSelectedReport(null); fetchReports(); }} />}
+      </AnimatePresence>
+    </motion.div>
   );
 }
