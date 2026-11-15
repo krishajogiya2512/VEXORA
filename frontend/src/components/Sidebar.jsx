@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ConfirmationModal from './ConfirmationModal';
 import {
-  LayoutDashboard, Search, ShieldCheck, History,
+  LayoutDashboard, Search, History,
   FileText, FolderOpen, Briefcase, Settings,
   LogOut, ChevronLeft, ChevronRight, Shield,
 } from 'lucide-react';
