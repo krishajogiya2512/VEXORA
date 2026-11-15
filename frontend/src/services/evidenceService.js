@@ -22,4 +22,9 @@ export const evidenceService = {
     const { data } = await api.delete(`/evidence/${id}`);
     return data;
   },
+
+  async getStatistics() {
+    const { data } = await api.get('/evidence/statistics');
+    return data;
+  },
 };
