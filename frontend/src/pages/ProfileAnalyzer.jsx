@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, X, Loader2, AlertCircle, Info } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { profileService } from '../services/profileService';
 import { detectionService } from '../services/detectionService';
 
@@ -121,7 +122,12 @@ export default function ProfileAnalyzer() {
   const isLoading = step === 'submitting' || step === 'analyzing';
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-3xl mx-auto space-y-6"
+    >
       {/* Info banner */}
       <div className="flex gap-3 bg-vx-blue/10 border border-vx-blue/20 rounded-xl px-4 py-3">
         <Info className="w-4 h-4 text-vx-blue flex-shrink-0 mt-0.5" />
@@ -268,6 +274,6 @@ export default function ProfileAnalyzer() {
           </div>
         </form>
       )}
-    </div>
+    </motion.div>
   );
 }

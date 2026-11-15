@@ -5,6 +5,7 @@ import {
   Save, Eye, EyeOff, AlertCircle, CheckCircle,
   Loader2, Shield, Bell, Info,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import api from '../services/api';
@@ -239,7 +240,12 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-2xl mx-auto space-y-6"
+    >
       {/* Account profile card */}
       <Section title="Account Profile" subtitle="Your VEXORA account details" icon={User}>
         <div className="flex items-center gap-5">
@@ -306,6 +312,6 @@ export default function Settings() {
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

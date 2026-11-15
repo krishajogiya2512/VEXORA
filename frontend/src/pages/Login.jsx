@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -52,7 +53,12 @@ export default function Login() {
       {/* Background grid */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
 
-      <div className="relative w-full max-w-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="relative w-full max-w-sm"
+      >
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex w-16 h-16 rounded-2xl bg-vx-blue/15 border border-vx-blue/30 items-center justify-center mb-4">
@@ -132,7 +138,7 @@ export default function Login() {
             Restricted access. Unauthorized use is prohibited.
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, XCircle, FileText, Upload, ExternalLink, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { detectionService } from '../services/detectionService';
 import { RiskBadge } from '../components/RiskBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -111,7 +112,12 @@ export default function DetectionResults() {
   const detectedCount = indicators?.filter(i => i.detected).length || 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-4xl mx-auto space-y-6"
+    >
       {/* Back */}
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-vx-muted hover:text-vx-text text-sm transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back
@@ -199,6 +205,6 @@ export default function DetectionResults() {
           {indicators?.map((ind, i) => <IndicatorRow key={i} indicator={ind} />)}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
