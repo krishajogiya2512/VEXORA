@@ -3,6 +3,12 @@ import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
+/**
+ * AuthContext – Central authentication provider for VEXORA.
+ *
+ * Coordinates JWT token storage in localStorage, proactive session verification
+ * on application mount, and reactive logout on interceptor-dispatched 401 events.
+ */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('vexora_user');
