@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, RefreshCw, Eye, ChevronDown, ChevronUp,
   Briefcase, Clock, User, AlertTriangle, X, Loader2,
-  FileText, MessageSquare, CheckCircle
+  FileText, MessageSquare, CheckCircle, Shield
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { reportService } from '../services/reportService';
 import { StatusBadge, RiskBadge } from '../components/RiskBadge';
 import DataTable from '../components/DataTable';
@@ -16,15 +17,6 @@ const STATUSES = [
   'PENDING', 'UNDER_REVIEW', 'VERIFIED_SUSPICIOUS',
   'INSUFFICIENT_EVIDENCE', 'ESCALATED', 'CLOSED'
 ];
-
-const STATUS_COLORS = {
-  PENDING:               'text-gray-400 bg-gray-500/10 border-gray-500/20',
-  UNDER_REVIEW:          'text-blue-400 bg-blue-500/10 border-blue-500/20',
-  VERIFIED_SUSPICIOUS:   'text-red-400 bg-red-500/10 border-red-500/20',
-  INSUFFICIENT_EVIDENCE: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-  ESCALATED:             'text-orange-400 bg-orange-500/10 border-orange-500/20',
-  CLOSED:                'text-gray-500 bg-gray-700/30 border-gray-700/30',
-};
 
 /* ── Case Detail Drawer ─────────────────────────────────────────────────── */
 function CaseDrawer({ caseId, onClose, onUpdated }) {
@@ -92,23 +84,35 @@ function CaseDrawer({ caseId, onClose, onUpdated }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
       {/* Drawer panel */}
-      <div className="relative w-full max-w-xl bg-vx-card border-l border-vx-border flex flex-col h-full overflow-hidden shadow-2xl">
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="relative w-full max-w-xl bg-vx-card border-l border-vx-border flex flex-col h-full overflow-hidden shadow-2xl z-10"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-vx-border flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-vx-border flex-shrink-0 bg-vx-sidebar/50">
           <div>
             <div className="flex items-center gap-3">
               <Briefcase className="w-5 h-5 text-vx-blue" />
-              <h2 className="text-vx-text font-semibold text-base">
+              <h2 className="text-vx-text font-semibold text-base font-mono">
                 {loading ? 'Loading…' : report?.caseId}
               </h2>
               {report && <StatusBadge status={report.status} />}
             </div>
             {report && <p className="text-vx-muted text-xs mt-0.5 ml-8">{report.title}</p>}
           </div>
-          <button onClick={onClose} className="text-vx-muted hover:text-vx-text transition-colors">
+          <button onClick={onClose} className="text-vx-muted hover:text-vx-text transition-colors p-1 rounded-lg hover:bg-vx-secondary">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -124,16 +128,16 @@ function CaseDrawer({ caseId, onClose, onUpdated }) {
           ) : (
             <>
               {/* Meta grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Profile', value: `@${report.profile?.username || '—'}`, sub: report.profile?.platform },
-                  { label: 'Severity', value: report.severity },
-                  { label: 'Submitted By', value: report.submittedBy?.name || '—' },
+                  { label: 'Target Profile', value: `@${report.profile?.username || '—'}`, sub: report.profile?.platform },
+                  { label: 'Case Severity', value: report.severity },
+                  { label: 'Investigator', value: report.submittedBy?.name || '—' },
                   { label: 'Assigned To', value: report.assignedTo?.name || 'Unassigned' },
-                  { label: 'Created', value: new Date(report.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
+                  { label: 'Date Opened', value: new Date(report.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
                   { label: 'Last Updated', value: new Date(report.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
                 ].map(item => (
-                  <div key={item.label} className="bg-vx-secondary/50 rounded-xl px-4 py-3">
+                  <div key={item.label} className="bg-vx-secondary/50 rounded-xl px-4 py-3 border border-vx-border/50">
                     <p className="text-vx-muted text-xs mb-0.5">{item.label}</p>
                     <p className="text-vx-text text-sm font-medium capitalize">{item.value}</p>
                     {item.sub && <p className="text-vx-muted text-xs capitalize">{item.sub}</p>}
@@ -142,22 +146,22 @@ function CaseDrawer({ caseId, onClose, onUpdated }) {
               </div>
 
               {/* Description */}
-              <div>
-                <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-2">Description</p>
+              <div className="bg-vx-secondary/30 rounded-xl p-4 border border-vx-border/40">
+                <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-2">Case Summary</p>
                 <p className="text-vx-text text-sm leading-relaxed">{report.description}</p>
               </div>
 
               {/* Detection summary */}
               {report.detection && (
                 <div className="bg-vx-secondary/50 border border-vx-border rounded-xl px-4 py-3">
-                  <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-2">Detection Summary</p>
+                  <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-2">Detection Intel</p>
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="text-vx-muted text-xs">Risk Score</p>
                       <p className="text-vx-text font-bold text-lg">{report.detection.riskScore}<span className="text-vx-muted text-xs font-normal">/100</span></p>
                     </div>
                     <RiskBadge level={report.detection.riskLevel} />
-                    <p className="text-vx-muted text-xs capitalize ml-auto">{report.detection.detectionMethod?.replace('_', ' ')}</p>
+                    <p className="text-vx-muted text-xs capitalize ml-auto font-mono">{report.detection.detectionMethod?.replace(/_/g, ' ')}</p>
                   </div>
                 </div>
               )}
@@ -165,11 +169,11 @@ function CaseDrawer({ caseId, onClose, onUpdated }) {
               {/* Status history */}
               {report.statusHistory?.length > 0 && (
                 <div>
-                  <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-2">Status History</p>
-                  <div className="space-y-2">
+                  <p className="text-vx-muted text-xs font-semibold uppercase tracking-wider mb-2">Audit Timeline</p>
+                  <div className="space-y-2 border-l-2 border-vx-border ml-2 pl-3">
                     {[...report.statusHistory].reverse().map((h, i) => (
-                      <div key={i} className="flex items-start gap-3 text-xs">
-                        <div className="w-1.5 h-1.5 rounded-full bg-vx-blue mt-1.5 flex-shrink-0" />
+                      <div key={i} className="text-xs relative">
+                        <div className="w-2 h-2 rounded-full bg-vx-blue absolute -left-[17px] top-1" />
                         <div>
                           <span className="text-vx-text font-medium">{h.status?.replace(/_/g, ' ')}</span>
                           {h.reason && <span className="text-vx-muted ml-2">— {h.reason}</span>}
@@ -187,12 +191,12 @@ function CaseDrawer({ caseId, onClose, onUpdated }) {
                   Investigation Notes ({report.analystNotes?.length || 0})
                 </p>
                 {(!report.analystNotes || report.analystNotes.length === 0) ? (
-                  <p className="text-vx-muted text-xs">No notes yet.</p>
+                  <p className="text-vx-muted text-xs">No notes added yet.</p>
                 ) : (
                   <div className="space-y-2">
                     {report.analystNotes.map((n, i) => (
                       <div key={i} className="bg-vx-secondary/50 border border-vx-border rounded-lg px-4 py-3">
-                        <p className="text-vx-text text-sm">{n.note}</p>
+                        <p className="text-vx-text text-sm leading-relaxed">{n.note}</p>
                         <p className="text-vx-muted text-xs mt-1.5">
                           {n.addedBy?.name || 'Analyst'} · {new Date(n.addedAt).toLocaleString()}
                         </p>
@@ -250,34 +254,51 @@ function CaseDrawer({ caseId, onClose, onUpdated }) {
             <input
               type="text"
               className="input text-sm"
-              placeholder="Reason for change (optional)"
+              placeholder="Reason for status change (optional)"
               value={reason}
               onChange={e => setReason(e.target.value)}
             />
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 /* ── Stat summary bar ───────────────────────────────────────────────────── */
-function CaseStatBar({ counts }) {
+function CaseStatBar({ counts, activeStatus, onSelectStatus }) {
   const items = [
-    { label: 'Pending',        key: 'PENDING',               color: 'text-gray-400' },
-    { label: 'Under Review',   key: 'UNDER_REVIEW',          color: 'text-blue-400' },
-    { label: 'Verified',       key: 'VERIFIED_SUSPICIOUS',   color: 'text-red-400' },
-    { label: 'Escalated',      key: 'ESCALATED',             color: 'text-orange-400' },
-    { label: 'Closed',         key: 'CLOSED',                color: 'text-gray-500' },
+    { label: 'All Cases',      key: '',                      color: 'text-vx-text',      bg: 'bg-vx-secondary/60' },
+    { label: 'Pending',        key: 'PENDING',               color: 'text-yellow-400',   bg: 'bg-yellow-500/10' },
+    { label: 'Under Review',   key: 'UNDER_REVIEW',          color: 'text-blue-400',     bg: 'bg-blue-500/10' },
+    { label: 'Verified',       key: 'VERIFIED_SUSPICIOUS',   color: 'text-red-400',      bg: 'bg-red-500/10' },
+    { label: 'Escalated',      key: 'ESCALATED',             color: 'text-orange-400',   bg: 'bg-orange-500/10' },
+    { label: 'Closed',         key: 'CLOSED',                color: 'text-gray-400',     bg: 'bg-gray-500/10' },
   ];
+
   return (
-    <div className="card flex flex-wrap gap-6">
-      {items.map(item => (
-        <div key={item.key} className="text-center">
-          <p className={`text-2xl font-bold ${item.color}`}>{counts[item.key] ?? 0}</p>
-          <p className="text-vx-muted text-xs mt-0.5">{item.label}</p>
-        </div>
-      ))}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {items.map(item => {
+        const count = item.key === ''
+          ? Object.values(counts).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0)
+          : (counts[item.key] ?? 0);
+        const isActive = activeStatus === item.key;
+        return (
+          <motion.button
+            key={item.key}
+            type="button"
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onSelectStatus(item.key)}
+            className={`card text-left p-3.5 cursor-pointer transition-all border ${
+              isActive ? 'border-vx-blue ring-1 ring-vx-blue/50' : 'border-vx-border hover:border-vx-border/80'
+            }`}
+          >
+            <p className="text-vx-muted text-xs font-medium mb-1">{item.label}</p>
+            <p className={`text-2xl font-bold ${item.color}`}>{count}</p>
+          </motion.button>
+        );
+      })}
     </div>
   );
 }
@@ -286,13 +307,18 @@ function CaseStatBar({ counts }) {
 export default function CaseManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [data, setData]           = useState([]);
   const [loading, setLoading]     = useState(false);
   const [page, setPage]           = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [counts, setCounts]       = useState({});
-  const [filters, setFilters]     = useState({ status: '', severity: '', search: '' });
+  const [filters, setFilters]     = useState({
+    status: location.state?.filterStatus || location.state?.status || '',
+    severity: '',
+    search: '',
+  });
   const [openCase, setOpenCase]   = useState(null); // report _id
 
   const fetchCases = useCallback(async () => {
@@ -335,7 +361,7 @@ export default function CaseManagement() {
       render: v => <span className="font-mono text-vx-blue text-sm font-semibold">{v}</span>,
     },
     {
-      key: 'profile', label: 'Profile',
+      key: 'profile', label: 'Target Profile',
       render: (_, row) => (
         <div>
           <p className="text-vx-text text-sm font-medium">@{row.profile?.username || '—'}</p>
@@ -358,7 +384,7 @@ export default function CaseManagement() {
       render: v => <StatusBadge status={v} />,
     },
     {
-      key: 'submittedBy', label: 'Submitted By',
+      key: 'submittedBy', label: 'Investigator',
       render: v => (
         <div className="flex items-center gap-1.5">
           <User className="w-3 h-3 text-vx-muted" />
@@ -384,7 +410,7 @@ export default function CaseManagement() {
           onClick={() => setOpenCase(row._id)}
           className="flex items-center gap-1 text-vx-blue hover:text-blue-400 text-xs font-medium transition-colors"
         >
-          <Eye className="w-3.5 h-3.5" /> Open
+          <Eye className="w-3.5 h-3.5" /> Open Case
         </button>
       ),
     },
@@ -396,9 +422,18 @@ export default function CaseManagement() {
   };
 
   return (
-    <div className="space-y-5">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-5"
+    >
       {/* Summary bar */}
-      <CaseStatBar counts={counts} />
+      <CaseStatBar
+        counts={counts}
+        activeStatus={filters.status}
+        onSelectStatus={(status) => { setFilters(f => ({ ...f, status: f.status === status ? '' : status })); setPage(1); }}
+      />
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
@@ -406,7 +441,7 @@ export default function CaseManagement() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vx-muted" />
           <input
             type="text"
-            placeholder="Search case ID, title, or profile…"
+            placeholder="Search case ID, title, or username…"
             className="input pl-9"
             value={filters.search}
             onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
@@ -453,13 +488,15 @@ export default function CaseManagement() {
       />
 
       {/* Drawer */}
-      {openCase && (
-        <CaseDrawer
-          caseId={openCase}
-          onClose={() => setOpenCase(null)}
-          onUpdated={fetchCases}
-        />
-      )}
-    </div>
+      <AnimatePresence>
+        {openCase && (
+          <CaseDrawer
+            caseId={openCase}
+            onClose={() => setOpenCase(null)}
+            onUpdated={fetchCases}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

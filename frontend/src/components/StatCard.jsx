@@ -1,18 +1,25 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend }) {
+export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, onClick }) {
   const colorMap = {
-    blue:   { bg: 'bg-blue-500/10',   icon: 'text-blue-400',   border: 'border-blue-500/20' },
-    green:  { bg: 'bg-green-500/10',  icon: 'text-green-400',  border: 'border-green-500/20' },
-    yellow: { bg: 'bg-yellow-500/10', icon: 'text-yellow-400', border: 'border-yellow-500/20' },
-    red:    { bg: 'bg-red-500/10',    icon: 'text-red-400',    border: 'border-red-500/20' },
-    purple: { bg: 'bg-purple-500/10', icon: 'text-purple-400', border: 'border-purple-500/20' },
+    blue:   { bg: 'bg-blue-500/10',   icon: 'text-blue-400',   border: 'border-blue-500/20',   hover: 'hover:border-blue-500/50' },
+    green:  { bg: 'bg-green-500/10',  icon: 'text-green-400',  border: 'border-green-500/20',  hover: 'hover:border-green-500/50' },
+    yellow: { bg: 'bg-yellow-500/10', icon: 'text-yellow-400', border: 'border-yellow-500/20', hover: 'hover:border-yellow-500/50' },
+    red:    { bg: 'bg-red-500/10',    icon: 'text-red-400',    border: 'border-red-500/20',    hover: 'hover:border-red-500/50' },
+    purple: { bg: 'bg-purple-500/10', icon: 'text-purple-400', border: 'border-purple-500/20', hover: 'hover:border-purple-500/50' },
   };
   const c = colorMap[color] || colorMap.blue;
 
   return (
-    <div className="card hover:border-vx-blue/30 transition-all duration-200">
+    <motion.div
+      whileHover={onClick ? { scale: 1.02, y: -2 } : {}}
+      whileTap={onClick ? { scale: 0.98 } : {}}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      onClick={onClick}
+      className={`card ${c.hover} transition-all duration-200 ${onClick ? 'cursor-pointer' : ''}`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-vx-muted text-sm font-medium mb-1">{title}</p>
@@ -39,6 +46,9 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
           <span className="text-vx-muted ml-1">vs last month</span>
         </div>
       )}
-    </div>
+      {onClick && (
+        <p className="text-xs text-vx-muted mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</p>
+      )}
+    </motion.div>
   );
 }
