@@ -16,12 +16,14 @@ const statusConfig = {
   CLOSED:                { label: 'Closed',               cls: 'badge-closed' },
 };
 
+const DEFAULT_BADGE = { label: 'Pending', cls: 'badge-pending' };
+
 export function RiskBadge({ level }) {
-  const cfg = riskConfig[level] || { label: level, cls: 'badge-pending' };
-  return <span className={`badge ${cfg.cls}`}>{cfg.label}</span>;
+  const badgeConfig = (level && riskConfig[level]) || { label: level || 'Unknown', cls: 'badge-pending' };
+  return <span className={`badge ${badgeConfig.cls}`}>{badgeConfig.label}</span>;
 }
 
 export function StatusBadge({ status }) {
-  const cfg = statusConfig[status] || { label: status, cls: 'badge-pending' };
-  return <span className={`badge ${cfg.cls}`}>{cfg.label}</span>;
+  const badgeConfig = (status && statusConfig[status]) || { label: status || 'Unknown', cls: 'badge-pending' };
+  return <span className={`badge ${badgeConfig.cls}`}>{badgeConfig.label}</span>;
 }

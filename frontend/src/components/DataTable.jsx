@@ -8,13 +8,12 @@ export default function DataTable({
   page, totalPages, onPageChange,
   sortKey, sortOrder, onSort,
 }) {
+  const getRowKey = (row, index) => row._id || row.id || `row-${index}`;
+
   const handleSort = (key) => {
     if (!onSort) return;
-    if (sortKey === key) {
-      onSort(key, sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      onSort(key, 'desc');
-    }
+    const nextOrder = sortKey === key && sortOrder === 'asc' ? 'desc' : 'asc';
+    onSort(key, sortKey === key ? nextOrder : 'desc');
   };
 
   return (
@@ -57,7 +56,7 @@ export default function DataTable({
               </tr>
             ) : (
               data.map((row, idx) => (
-                <tr key={row._id || row.id || idx} className="table-row">
+                <tr key={getRowKey(row, idx)} className="table-row">
                   {columns.map((col) => (
                     <td key={col.key} className="table-cell">
                       {col.render ? col.render(row[col.key], row) : row[col.key] ?? '—'}
