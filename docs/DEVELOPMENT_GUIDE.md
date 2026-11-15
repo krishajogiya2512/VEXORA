@@ -17,3 +17,8 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Code Quality Standards
+- Keep functions modular and purpose-specific.
+- Document complex heuristics and algorithmic rules.
+- Test endpoint responses against edge-case profile payloads.
