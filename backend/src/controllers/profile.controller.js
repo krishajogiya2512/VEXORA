@@ -67,7 +67,11 @@ const getProfiles = async (req, res, next) => {
 
     const filter = {};
     if (platform) filter.platform = platform.toLowerCase();
-    if (status) filter.status = status;
+    if (status) {
+      filter.status = status.includes(',')
+        ? { $in: status.split(',').map(s => s.trim()) }
+        : status;
+    }
     if (search) {
       filter.$or = [
         { username: { $regex: search, $options: 'i' } },

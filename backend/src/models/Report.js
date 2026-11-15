@@ -140,16 +140,11 @@ reportSchema.statics.getNextCaseId = async function () {
   return `VXRA-${String(nextNumber).padStart(5, '0')}`;
 };
 
-// ── Pre-save: auto-generate caseId ───────────────────────────────────────────
-reportSchema.pre('save', async function (next) {
+// ── Pre-validate: auto-generate caseId ────────────────────────────────────────
+reportSchema.pre('validate', async function () {
   if (this.isNew && !this.caseId) {
-    try {
-      this.caseId = await this.constructor.getNextCaseId();
-    } catch (err) {
-      return next(err);
-    }
+    this.caseId = await this.constructor.getNextCaseId();
   }
-  return next();
 });
 
 const Report = mongoose.model('Report', reportSchema);

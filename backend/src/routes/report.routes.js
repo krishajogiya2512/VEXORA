@@ -9,7 +9,7 @@ const { authorize } = require('../middleware/role.middleware');
 router.use(protect);
 
 // GET  /api/reports/statistics
-router.get('/statistics', authorize('ADMIN', 'ANALYST'), getReportStatistics);
+router.get('/statistics', authorize('ADMIN', 'ANALYST', 'VIEWER'), getReportStatistics);
 // POST /api/reports
 router.post('/', authorize('ADMIN', 'ANALYST'), createReport);
 // GET  /api/reports

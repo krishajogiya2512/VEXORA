@@ -36,9 +36,10 @@ const getDetections = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const { riskLevel, detectionMethod, startDate, endDate } = req.query;
+    const { riskLevel, detectionMethod, startDate, endDate, profileId, profile } = req.query;
 
     const query = {};
+    if (profileId || profile) query.profile = profileId || profile;
     if (riskLevel) query.riskLevel = riskLevel.toUpperCase();
     if (detectionMethod) query.detectionMethod = detectionMethod;
     if (startDate || endDate) {
