@@ -82,6 +82,7 @@ app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/profiles', require('./routes/profile.routes'));
 app.use('/api/detection', require('./routes/detection.routes'));
 app.use('/api/reports', require('./routes/report.routes'));
+app.use('/api/cases', require('./routes/report.routes'));
 app.use('/api/evidence', require('./routes/evidence.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 
