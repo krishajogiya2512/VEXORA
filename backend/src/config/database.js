@@ -2,37 +2,44 @@
 
 const mongoose = require('mongoose');
 
+let mongodInstance = null;
+
 /**
- * connectDB – Connects Mongoose to MongoDB Atlas using MONGODB_URI.
+ * connectDB – Connects Mongoose to MongoDB.
  *
- * Requirements:
- *   - MONGODB_URI must be set in backend/.env.
- *   - Works with MongoDB Atlas (mongodb+srv://) only in development/production.
- *   - The server will NOT start if the connection fails.
- *   - There is NO silent fallback to an in-memory database.
+ * Supported Modes:
+ *   1. In-Memory Database (Development/Testing only):
+ *      - Enabled when USE_MEMORY_DB=true and NODE_ENV is 'development' or 'test'.
+ *      - Spins up an embedded MongoMemoryServer instance.
+ *      - Ephemeral storage, cleanly shuts down on process exit/SIGINT/SIGTERM.
  *
- * To use mongodb-memory-server explicitly for automated tests only, set:
- *   USE_MEMORY_DB=true  (only honoured when NODE_ENV=test)
+ *   2. Persistent Database (MongoDB Atlas or Local MongoDB):
+ *      - Active when USE_MEMORY_DB is false or not set (and in production).
+ *      - Connects via MONGODB_URI.
+ *      - The server will NOT start if the connection fails (no silent fallback).
  */
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI;
   const env = process.env.NODE_ENV || 'development';
+  const isMemoryDb =
+    process.env.USE_MEMORY_DB === 'true' && (env === 'development' || env === 'test');
 
-  // ── Guard: require MONGODB_URI ─────────────────────────────────────────────
+  // ── Mode 1: In-Memory MongoDB (Development / Test) ─────────────────────────
+  if (isMemoryDb) {
+    await _startMemoryServer(env);
+    _registerEventListeners();
+    return;
+  }
+
+  // ── Mode 2: Real MongoDB (Atlas / Local) ───────────────────────────────────
   if (!uri || uri === 'your_mongodb_atlas_connection_string_here') {
     console.error('❌  MONGODB_URI is not configured.');
-    console.error('    1. Copy backend/.env.example → backend/.env');
-    console.error('    2. Set MONGODB_URI to your MongoDB Atlas connection string.');
+    console.error('    1. Set MONGODB_URI in backend/.env to your MongoDB Atlas or local URI, OR');
+    console.error('    2. Set USE_MEMORY_DB=true in backend/.env for local in-memory development.');
     console.error('    3. Restart the server.');
     process.exit(1);
   }
 
-  // ── Optional: in-memory server for automated tests only ───────────────────
-  if (process.env.USE_MEMORY_DB === 'true' && env === 'test') {
-    return _startMemoryServer();
-  }
-
-  // ── Connect to real MongoDB ────────────────────────────────────────────────
   console.log('⏳  Connecting to MongoDB…');
 
   try {
@@ -46,11 +53,15 @@ const connectDB = async () => {
     console.log(`✅  MongoDB connected → ${host}/${name}`);
   } catch (err) {
     console.error(`❌  MongoDB connection failed: ${err.message}`);
-    console.error('    Check that MONGODB_URI is correct and your IP is whitelisted in Atlas.');
+    console.error('    Check that MONGODB_URI is correct and your IP is whitelisted if using Atlas.');
     process.exit(1);
   }
 
-  // ── Ongoing event listeners ────────────────────────────────────────────────
+  _registerEventListeners();
+};
+
+// ── Ongoing event listeners ──────────────────────────────────────────────────
+const _registerEventListeners = () => {
   mongoose.connection.on('disconnected', () => {
     console.warn('⚠️   MongoDB disconnected – attempting reconnect…');
   });
@@ -64,8 +75,8 @@ const connectDB = async () => {
   });
 };
 
-// ── Internal helper: in-process memory server (tests only) ────────────────────
-const _startMemoryServer = async () => {
+// ── Helper: in-process memory server ─────────────────────────────────────────
+const _startMemoryServer = async (env) => {
   let MongoMemoryServer;
   try {
     ({ MongoMemoryServer } = require('mongodb-memory-server'));
@@ -76,15 +87,52 @@ const _startMemoryServer = async () => {
     );
   }
 
-  const mongod = await MongoMemoryServer.create({ instance: { dbName: 'vexora_test' } });
-  const memUri = mongod.getUri();
+  const dbName = env === 'test' ? 'vexora_test' : 'vexora_dev';
+  console.log(`⏳  Starting in-memory MongoDB (${dbName})…`);
 
-  await mongoose.connect(memUri, { serverSelectionTimeoutMS: 10000 });
-  console.log('✅  MongoDB (in-memory, test mode) connected');
+  try {
+    mongodInstance = await MongoMemoryServer.create({ instance: { dbName } });
+    const memUri = mongodInstance.getUri();
 
-  process.on('exit', () => mongod.stop());
-  process.on('SIGINT', async () => { await mongod.stop(); process.exit(); });
-  process.on('SIGTERM', async () => { await mongod.stop(); process.exit(); });
+    await mongoose.connect(memUri, { serverSelectionTimeoutMS: 10000 });
+
+    const { host, name } = mongoose.connection;
+    console.log(`✅  MongoDB (in-memory) connected → ${host}/${name}`);
+    console.log('📌  Note: In-memory mode active. Data resets on server restart.');
+  } catch (err) {
+    console.error(`❌  Failed to start in-memory MongoDB: ${err.message}`);
+    process.exit(1);
+  }
+
+  const cleanup = async () => {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.disconnect();
+      }
+      if (mongodInstance) {
+        await mongodInstance.stop();
+        mongodInstance = null;
+      }
+    } catch {
+      // Ignore errors on shutdown
+    }
+  };
+
+  process.on('exit', () => {
+    if (mongodInstance) {
+      mongodInstance.stop();
+    }
+  });
+
+  process.on('SIGINT', async () => {
+    await cleanup();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    await cleanup();
+    process.exit(0);
+  });
 };
 
 module.exports = connectDB;

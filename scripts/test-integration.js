@@ -226,7 +226,8 @@ async function run() {
     ],
   };
 
-  require('fs').writeFileSync('/Users/samruddhi1306/VEXORA/scripts/last-test-result.json', JSON.stringify(report, null, 2));
+  const path = require('path');
+  require('fs').writeFileSync(path.join(__dirname, 'last-test-result.json'), JSON.stringify(report, null, 2));
   console.log('\n📄 Full results saved to: scripts/last-test-result.json');
   console.log('\n🔁 PERSISTENCE TEST:');
   report.persistenceInstructions.forEach(l => console.log('   ' + l));
